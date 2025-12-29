@@ -471,6 +471,9 @@
       overlay.className = 'ad-click-guard-overlay';
       overlay.setAttribute('data-ad-element', true);
       
+      // Store reference to the original element on the overlay
+      overlay._adElement = element;
+      
       // Position the overlay absolutely over the ad element
       updateOverlayPosition(overlay, element);
       
@@ -585,14 +588,12 @@
         overlay.style.left = rect.left + 'px';
         console.debug('Overlay positioned fixed for element with position: fixed');
       } else if (elementPosition === 'sticky') {
-        // For sticky elements, use fixed positioning when the element is stuck
-        // Check if the element is currently acting as fixed due to scrolling
-        const elementRect = element.getBoundingClientRect();
-        
-        // If element is currently in a 'fixed' state due to sticky behavior
+        // For sticky elements, we need to determine if it's currently acting as fixed or not
+        // Sticky elements behave differently based on scroll position
+        // Use fixed positioning to match the sticky element's current behavior
         overlay.style.position = 'fixed';
-        overlay.style.top = elementRect.top + 'px';
-        overlay.style.left = elementRect.left + 'px';
+        overlay.style.top = rect.top + 'px';
+        overlay.style.left = rect.left + 'px';
         console.debug('Overlay positioned fixed for element with position: sticky');
       } else {
         // For static, relative, or absolute elements, use absolute positioning with scroll offsets
