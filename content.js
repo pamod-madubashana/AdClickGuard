@@ -319,7 +319,7 @@
     detectionInProgress = true;
     
     // Use the detectAndOverlayAds function from adDetection.js
-    window.adDetection.detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement, addAdOverlay, calculateAdConfidence, isElementLikelyAd);
+    window.adDetection.detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, calculateAdConfidence, isElementLikelyAd);
     
     // Additional comprehensive scan to catch any missed ads
     setTimeout(() => {
@@ -336,12 +336,12 @@
   
   function detectGoogleAds() {
     // Use the detectGoogleAds function from adDetection.js
-    window.adDetection.detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogleAdElement);
+    window.adDetection.detectGoogleAds(adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, isGoogleAdElement);
   }
   
   function detectHighConfidenceAds() {
     // Use the detectHighConfidenceAds function from adDetection.js
-    window.adDetection.detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, isElementLikelyAd, calculateAdConfidence);
+    window.adDetection.detectHighConfidenceAds(adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, isElementLikelyAd, calculateAdConfidence);
   }
   
   // Calculate confidence score for an element being an ad
@@ -375,14 +375,20 @@
     return adElements.has(element);
   }
     
+  // Function to check if any parent element already has an overlay
+  function hasParentAdOverlay(element) {
+    let parent = element.parentElement;
+    while (parent) {
+      if (isAdElement(parent)) {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+    return false;
+  }
+    
   function addAdOverlay(element) {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
-    
-    // Don't overlay if already has an overlay or highlight
-    if (isAdElement(element)) {
-      console.debug('Element already has overlay, skipping:', element);
-      return;
-    }
     
     // Additional check to avoid overlaying essential elements
     const tagName = element.tagName.toLowerCase();
@@ -391,8 +397,21 @@
     
     // Don't overlay essential page elements
     const essentialElements = ['body', 'html', 'head', 'header', 'footer', 'nav', 'main', 'article', 'section', 'aside'];
-    if (essentialElements.includes(tagName)) {
+    if (essentialElements.includes(tagName) ||
+        element === document.body || 
+        element === document.documentElement) {
       console.debug('Skipping overlay for essential element:', element);
+      return;
+    }
+    
+    // Additional check for elements that are likely page containers based on attributes
+    if ((tagName === 'div' && 
+         (className.includes('container') || className.includes('wrapper') || 
+          className.includes('layout') || className.includes('page') || className.includes('site')) &&
+         !className.includes('ad') && !className.includes('advertisement') && !className.includes('banner')) ||
+        ((id.includes('container') || id.includes('wrapper') || id.includes('layout') || id.includes('main') || id.includes('content')) &&
+         !id.includes('ad') && !id.includes('advertisement') && !id.includes('banner'))) {
+      console.debug('Skipping overlay for likely page container element:', element);
       return;
     }
     
@@ -408,7 +427,43 @@
       return;
     }
     
-    // Note: Element should already be confirmed as ad before calling this function
+    // Don't overlay if parent element already has an overlay
+    if (hasParentAdOverlay(element)) {
+      console.debug('Parent element already has overlay, skipping child:', element);
+      return;
+    }
+    
+    // Get element metrics for size validation
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Size safety rules: Do NOT overlay elements that are too large
+    if (rect.width > viewportWidth * 0.9 ||  // More than 90% of viewport width
+        rect.height > viewportHeight * 0.6 || // More than 60% of viewport height
+        (rect.width > viewportWidth * 0.95 && rect.top <= 1 && rect.left <= 1) || // Positioned at top-left like a container
+        (rect.width < 2 || rect.height < 2)) { // Zero or near-zero dimensions
+      console.debug('Skipping overlay: element too large, positioned like container, or has near-zero dimensions:', element, 'Rect:', rect);
+      return;
+    }
+    
+    // Don't overlay elements that are too large or positioned like page containers (likely not ads)
+    // If element is nearly the full viewport size and positioned at top-left, it's likely a page container, not an ad
+    if ((rect.width > viewportWidth * 0.9 && rect.height > viewportHeight * 0.9)) {
+      console.debug('Skipping overlay for element that covers most of viewport:', element, 'Rect:', rect);
+      return;
+    }
+    
+    // Check if element already has an associated overlay (duplicate prevention)
+    if (isAdElement(element)) {
+      console.debug('Element already has overlay, skipping duplicate:', element);
+      return;
+    }
+    
+    // Mark element as being processed to prevent race conditions
+    // This ensures that if multiple detection functions run simultaneously,
+    // only one will proceed to create an overlay
+    adElements.set(element, true);
     
     try {
       // Create overlay element
@@ -427,7 +482,7 @@
         document.documentElement.appendChild(overlay);
       }
       
-      // Store the mapping between the ad element and its overlay
+      // Update the mapping to use the actual overlay element
       adElements.set(element, overlay);
       
       // Add resize and scroll listeners to keep overlay positioned correctly
@@ -490,6 +545,8 @@
       // Store the interval reference so we can clear it later
       overlay._visibilityInterval = visibilityInterval;
     } catch (e) {
+      // If there was an error, clean up by removing the element from the map
+      adElements.delete(element);
       console.error('❌ Error adding ad overlay:', e, 'Element:', element);
     }
   }
@@ -683,13 +740,13 @@
                   // Check for Google Publisher Tags
                   if (elementId.includes('gpt-ad') || elementId.includes('google_ads') || 
                       elementId.includes('div-gpt-ad') || elementId.includes('gpt_unit')) {
-                    if (!isAdElement(target)) {
+                    if (!isAdElement(target) && !hasParentAdOverlay(target)) {
                       addAdOverlay(target);
                     }
                   }
                             
                   // Check for elements with data-google-query-id (high confidence Google ads)
-                  if (target.hasAttribute('data-google-query-id') && !isAdElement(target)) {
+                  if (target.hasAttribute('data-google-query-id') && !isAdElement(target) && !hasParentAdOverlay(target)) {
                     addAdOverlay(target);
                   }
                             
@@ -698,12 +755,12 @@
                       target.hasAttribute('data-google-av-ad') ||
                       target.hasAttribute('data-google-av-element') ||
                       target.hasAttribute('data-ad-slot') ||
-                      target.hasAttribute('data-ad-format')) && !isAdElement(target)) {
+                      target.hasAttribute('data-ad-format')) && !isAdElement(target) && !hasParentAdOverlay(target)) {
                     addAdOverlay(target);
                   }
                             
                   // Check for GoogleActiveViewElement class
-                  if (target.classList && target.classList.contains('GoogleActiveViewElement') && !isAdElement(target)) {
+                  if (target.classList && target.classList.contains('GoogleActiveViewElement') && !isAdElement(target) && !hasParentAdOverlay(target)) {
                     addAdOverlay(target);
                   }
                 }
@@ -716,36 +773,44 @@
         
         // If ads were detected, run high-confidence detection to catch any missed ads
         if (adsDetected) {
-          setTimeout(() => {
-            detectHighConfidenceAds();
-          }, 100); // Small delay to allow elements to be fully rendered
+          // Only schedule detection if not already in progress
+          if (!detectionInProgress) {
+            setTimeout(() => {
+              detectHighConfidenceAds();
+            }, 100); // Small delay to allow elements to be fully rendered
+          }
         }
         
         // Re-process the entire page periodically to catch any missed elements
-        if (detectionTimeout) {
-          clearTimeout(detectionTimeout);
+        // Only schedule if not already scheduled
+        if (!detectionTimeout) {
+          detectionTimeout = setTimeout(() => {
+            if (isEnabled && !detectionInProgress) {
+              detectHighConfidenceAds(); // Run high-confidence detection only
+            }
+            detectionTimeout = null; // Reset timeout flag
+          }, 500); // Increased delay to reduce overlap
         }
-        detectionTimeout = setTimeout(() => {
-          if (isEnabled) {
-            detectHighConfidenceAds(); // Run high-confidence detection only
-          }
-        }, 300); // Check even more frequently to catch dynamic ads
         
-        // Run EasyList-based detection less frequently
-        setTimeout(() => {
-          if (isEnabled) {
-            detectAndOverlayAds();
-          }
-        }, 800);
+        // Run EasyList-based detection less frequently and only if not in progress
+        if (!detectionInProgress) {
+          setTimeout(() => {
+            if (isEnabled && !detectionInProgress) {
+              detectAndOverlayAds();
+            }
+          }, 600); // Reduced frequency
+        }
         
         // Additional check for Google AdSense ads that might have loaded
-        setTimeout(() => {
-          if (isEnabled) {
-            detectHighConfidenceAds();
-            // Run additional Google AdSense specific detection
-            detectGoogleAds();
-          }
-        }, 1200);
+        if (!detectionInProgress) {
+          setTimeout(() => {
+            if (isEnabled && !detectionInProgress) {
+              detectHighConfidenceAds();
+              // Run additional Google AdSense specific detection
+              detectGoogleAds();
+            }
+          }, 1000); // Reduced frequency
+        }
       });
       
       observer.observe(document.body, {
@@ -770,7 +835,7 @@
         try {
           const matchingElements = node.querySelectorAll ? node.querySelectorAll(selector) : [];
           matchingElements.forEach(element => {
-            if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+            if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
               // For EasyList matches, apply less strict validation
               const confidenceScore = calculateAdConfidence(element);
               if (isElementLikelyAd(element) || confidenceScore >= 2) {
@@ -787,7 +852,7 @@
       // Check for Google Publisher Tags elements
       const gptElements = node.querySelectorAll ? node.querySelectorAll('[id*="gpt-ad" i], [id*="google_ads" i], [id*="div-gpt-ad" i], [id*="gpt_unit" i]') : [];
       gptElements.forEach(element => {
-        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
           // These are Google Publisher Tags which are ads - verify with confidence scoring
           if (isElementLikelyAd(element)) {
             addAdOverlay(element);
@@ -798,7 +863,7 @@
       // Also check for high-confidence signals in the new node
       const allNewElements = node.querySelectorAll ? node.querySelectorAll('*') : [node];
       allNewElements.forEach(element => {
-        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
           // Apply more stringent check for all elements
           if (isElementLikelyAd(element)) {
             addAdOverlay(element);
@@ -813,7 +878,7 @@
       // Specifically check for iframe-based ads that may have been added
       const iframeElements = node.querySelectorAll ? node.querySelectorAll('iframe') : [];
       iframeElements.forEach(element => {
-        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
           // Check if iframe has ad-related src
           if (element.src && (
             element.src.includes('googlesyndication') || 
@@ -832,7 +897,7 @@
       // Check for image elements that may be ads
       const imgElements = node.querySelectorAll ? node.querySelectorAll('img') : [];
       imgElements.forEach(element => {
-        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
           // Check if img has ad-related src
           if (element.src && (
             element.src.includes('googlesyndication') || 
@@ -851,7 +916,7 @@
       // Enhanced check: look for any new elements that might be ads
       const allElementsNew = node.querySelectorAll ? node.querySelectorAll('*') : [node];
       allElementsNew.forEach(element => {
-        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+        if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
           // Check for elements with ad-related attributes
           if (element.classList && (
             element.classList.contains('adsbygoogle') ||
@@ -955,7 +1020,7 @@
       }
       
       // Use confidence-based validation for other elements
-      if (!isAdElement(element) && isElementLikelyAd(element)) {
+      if (!isAdElement(element) && !hasParentAdOverlay(element) && isElementLikelyAd(element)) {
         addAdOverlay(element);
       } else if (!isAdElement(element)) {
         // Log for debugging - element didn't pass confidence check

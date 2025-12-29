@@ -114,7 +114,7 @@ function sanitizeSelector(selector) {
 }
 
 // Main function to detect ads using EasyList selectors
-function detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement, addAdOverlay, calculateAdConfidence, isElementLikelyAd) {
+function detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, calculateAdConfidence, isElementLikelyAd) {
   if (!cosmeticSelectors || cosmeticSelectors.length === 0) return;
   
   console.log('🔍 Starting ad detection with', cosmeticSelectors.length, 'selectors');
@@ -140,13 +140,13 @@ function detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement,
         
         elements.forEach(element => {
           totalChecked++;
-          if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+          if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
             // For EasyList matches, apply confidence scoring to avoid false positives
             const confidenceScore = calculateAdConfidence(element, cosmeticSelectors);
-            
+                      
             // Only treat as ad if it passes our validation threshold
             if (isElementLikelyAd(element) || confidenceScore >= 4) {
-              totalMatched++;
+              totalMatched++; 
               console.log('🎯 Matched ad element with selector:', sanitizedSelector, 'Element:', element, 'Confidence:', confidenceScore);
               addAdOverlay(element);
             }
@@ -642,7 +642,7 @@ function matchesEasyListSelectors(element, cosmeticSelectors) {
 }
 
 // Function to detect Google Ads specifically
-function detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogleAdElement) {
+function detectGoogleAds(adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, isGoogleAdElement) {
   // Specifically check for Google AdSense elements that may have been missed
   try {
     // Check for elements with Google AdSense specific patterns
@@ -668,7 +668,7 @@ function detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogle
       try {
         const elements = document.querySelectorAll ? document.querySelectorAll(selector) : [];
         elements.forEach(element => {
-          if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && isGoogleAdElement(element)) {
+          if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element) && isGoogleAdElement(element)) {
             addAdOverlay(element);
           }
         });
@@ -691,7 +691,7 @@ function detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogle
       try {
         const elements = document.querySelectorAll ? document.querySelectorAll(selector) : [];
         elements.forEach(element => {
-          if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+          if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
             addAdOverlay(element);
           }
         });
@@ -705,14 +705,14 @@ function detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogle
 }
 
 // Function to detect high-confidence ads
-function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, isElementLikelyAd, calculateAdConfidence) {
+function detectHighConfidenceAds(adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, isElementLikelyAd, calculateAdConfidence) {
   // Directly check for high-confidence ad signals
   
   try {
     // Check for iframes with ad-related sources
     const adIframes = document.querySelectorAll ? document.querySelectorAll('iframe[src*="googlesyndication" i], iframe[src*="doubleclick" i], iframe[src*="googleadservices" i], iframe[src*="googletagservices" i], iframe[src*="googlesyndication" i], iframe[src*="pagead" i], iframe[src*="tpc.goog" i], iframe[src*="googleusercontent.com" i][src*="ad"], iframe[src*="securepubads" i]') : [];
     adIframes.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // These are definitely ads based on their source, add them directly
         addAdOverlay(element);
       }
@@ -721,7 +721,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for iframe containers that are likely ad containers based on class/id patterns
     const potentialAdContainers = document.querySelectorAll ? document.querySelectorAll('div[id^="google_ads_iframe_"], div[id*="gpt-ad-"], div[id*="div-gpt-ad"], ins[id^="gpt_unit_"], div[data-google-query-id], div[data-ad-client], div[data-ad-slot]') : [];
     potentialAdContainers.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // These are likely ad containers, add them directly
         addAdOverlay(element);
       }
@@ -730,7 +730,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for elements with Google ad attributes
     const googleAdElements = document.querySelectorAll ? document.querySelectorAll('[data-ad-client], [data-google-av-ad], [data-google-av-element], [data-ad-slot], [data-ad-format], [data-google-query-id], [data-ad-status="filled"]') : [];
     googleAdElements.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // Elements with Google ad attributes are definitely ads, add them directly
         addAdOverlay(element);
       }
@@ -739,7 +739,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for elements with adsbygoogle class
     const adsByGoogleElements = document.querySelectorAll ? document.querySelectorAll('.adsbygoogle') : [];
     adsByGoogleElements.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // Elements with adsbygoogle class are definitely ads, add them directly
         addAdOverlay(element);
       }
@@ -748,7 +748,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for Google Publisher Tags elements
     const gptElements = document.querySelectorAll ? document.querySelectorAll('[id*="gpt-ad" i], [id*="google_ads" i], [id*="div-gpt-ad" i], [id*="gpt_unit" i], [id*="google_ads_iframe" i], [class*="google_ads_iframe" i]') : [];
     gptElements.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // These are Google Publisher Tags which are definitely ads, add them directly
         addAdOverlay(element);
       }
@@ -757,7 +757,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for elements with data-google-query-id attribute (high confidence Google ads)
     const googleQueryIdElements = document.querySelectorAll ? document.querySelectorAll('[data-google-query-id]') : [];
     googleQueryIdElements.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // Elements with data-google-query-id are definitely Google ads
         addAdOverlay(element);
       }
@@ -766,7 +766,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for elements with GoogleActiveViewElement children
     const allElements = document.querySelectorAll ? document.querySelectorAll('*') : [];
     allElements.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         if (element.classList && element.classList.contains('GoogleActiveViewElement')) {
           // This is definitely an ad, add it directly
           addAdOverlay(element);
@@ -786,7 +786,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     const commonAdContainers = document.querySelectorAll ? document.querySelectorAll(commonAdSelectors) : [];
     
     commonAdContainers.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // For common ad containers, apply confidence scoring to avoid false positives
         if (isElementLikelyAd(element)) {
           addAdOverlay(element);
@@ -797,7 +797,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Check for elements that are likely ads based on size and attributes
     const allElementsCheck = document.querySelectorAll ? document.querySelectorAll('*') : [];
     allElementsCheck.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // Check for standard ad dimensions
         const rect = element.getBoundingClientRect();
         const width = rect.width;
@@ -836,7 +836,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     // Enhanced check: look for any element that contains ad-like content
     const allElementsAggressive = document.querySelectorAll ? document.querySelectorAll('*') : [];
     allElementsAggressive.forEach(element => {
-      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
+      if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && !hasParentAdOverlay(element)) {
         // Check if element itself has ad-related src or attributes
         const elementSrc = element.src || element.getAttribute('src') || '';
         const elementDataSrc = element.getAttribute('data-src') || '';
