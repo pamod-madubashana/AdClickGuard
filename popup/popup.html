@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ad Click Guard</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ Ad Click Guard</h1>
+      <p class="description">Protects you from accidental ad clicks on short-link sites</p>
+    </div>
+    
+    <div class="toggle-container">
+      <label class="switch">
+        <input type="checkbox" id="toggleSwitch">
+        <span class="slider"></span>
+      </label>
+      <span id="statusText" class="status-text">LOADING...</span>
+    </div>
+    
+    <div class="info">
+      <p>When enabled, this extension will overlay ads with a semi-transparent red shield to prevent accidental clicks.</p>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

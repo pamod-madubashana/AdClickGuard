@@ -1,0 +1,84 @@
+/* Ad Click Guard Content Styles */
+
+/* Overlay styles for ads */
+.ad-click-guard-overlay {
+  position: absolute;
+  background-color: rgba(255, 0, 0, 0.25); /* Red with low opacity as specified */
+  z-index: 2147483647; /* Maximum z-index value */
+  pointer-events: auto;
+  cursor: not-allowed;
+  margin: 0;
+  padding: 0;
+  border: 2px solid red; /* Red border to match the overlay color */
+  box-sizing: border-box;
+  transition: opacity 0.2s ease;
+}
+
+/* Make sure overlays are visible but don't completely obscure content */
+.ad-click-guard-overlay:hover {
+  background-color: rgba(255, 0, 0, 0.35); /* Slightly more opaque on hover */
+}
+
+/* Special visual indicator for blocked ad clicks */
+.ad-click-guard-overlay:active {
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+/* Animation for when an overlay is added */
+@keyframes adClickGuardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 0.7; }
+}
+
+.ad-click-guard-overlay {
+  animation: adClickGuardFadeIn 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ad-click-guard-overlay {
+    pointer-events: auto; /* Ensure touch events are captured on mobile */
+  }
+}
+
+/* Highlight styles for countdown timers (kept for compatibility but not used) */
+.ad-click-guard-highlight[data-highlight-type="countdown"] {
+  animation: adClickGuardPulse 1s infinite;
+  box-shadow: 0 0 10px #ff6b6b !important;
+  border: 2px solid #ff6b6b !important;
+  transition: all 0.3s ease !important;
+}
+
+@keyframes adClickGuardPulse {
+  0% { box-shadow: 0 0 10px #ff6b6b; }
+  50% { box-shadow: 0 0 20px #ff6b6b, 0 0 30px #ff6b6b; }
+  100% { box-shadow: 0 0 10px #ff6b6b; }
+}
+
+/* Highlight styles for action buttons (kept for compatibility but not used) */
+.ad-click-guard-highlight[data-highlight-type="action-button"] {
+  animation: adClickGuardGlow 1.5s infinite;
+  box-shadow: 0 0 10px #ffd700 !important;
+  border: 2px solid #ffd700 !important;
+  transition: all 0.3s ease !important;
+}
+
+@keyframes adClickGuardGlow {
+  0% { box-shadow: 0 0 10px #ffd700; }
+  50% { box-shadow: 0 0 20px #ffd700, 0 0 30px #ffd700; }
+  100% { box-shadow: 0 0 10px #ffd700; }
+}
+
+/* General highlight style that applies to all highlighted elements */
+.ad-click-guard-highlight {
+  position: relative;
+  border-radius: 4px;
+  z-index: 2147483646; /* Just under the overlay z-index */
+}
+
+/* Ensure that highlighted elements remain visible even if they have lower z-index */
+.ad-click-guard-highlight * {
+  position: relative;
+  z-index: 2147483645;
+}

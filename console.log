@@ -1,0 +1,339 @@
+jquery-migrate.min.js?ver=3.4.1:2 JQMIGRATE: Migrate is installed, version 3.4.1
+amp-inabox.js:127 Powered by AMP ⚡ HTML – Version 2509301838000 https://web.wblaxmibhandar.com/rajasthan-free-laptop-yojana-online-apply/
+amp-inabox.js:127 Powered by AMP ⚡ HTML – Version 2509301838000 https://web.wblaxmibhandar.com/rajasthan-free-laptop-yojana-online-apply/
+content.js:69 Received state from extension: true
+content.js:30 Content script initialized, current enabled state: true
+content.js:113 startAdGuard called, isInitialized: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:585 Processing new element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​
+content.js:621 Checking element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​ Class: ad-click-guard-highlight Tag: A
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​ has overlay: false
+content.js:585 Processing new element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​
+content.js:621 Checking element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​ Class: ad-click-guard-highlight Tag: A
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​ has overlay: false
+content.js:585 Processing new element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​
+content.js:621 Checking element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​ Class: ad-click-guard-highlight Tag: A
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1.05)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 20px;​">​Click Here​</a>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 0.412634%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 0.412634%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 0.412634%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 13.8331%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 13.8331%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 13.8331%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 13.8331%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 13.8331%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 13.8331%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 13.8331%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 13.8331%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 13.8331%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <div id=​"back-to-top" class=​"show">​…​</div>​flex
+content.js:621 Checking element: <div id=​"back-to-top" class=​"show">​…​</div>​flex Class: show Tag: DIV
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <div id=​"back-to-top" class=​"show">​…​</div>​flex has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 13.8331%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 13.8331%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 13.8331%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 13.8331%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 13.8331%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 13.8331%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 44.5056%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 44.5056%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 44.5056%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 44.5056%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 44.5056%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 44.5056%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 44.5056%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 44.5056%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 44.5056%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 44.5056%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 44.5056%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 44.5056%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 44.5056%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 44.5056%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 44.5056%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 10px;​">​Click Here​</a>​
+content.js:621 Checking element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 10px;​">​Click Here​</a>​ Class: ad-click-guard-highlight Tag: A
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 10px;​">​Click Here​</a>​ has overlay: false
+content.js:585 Processing new element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 10px;​">​Click Here​</a>​
+content.js:621 Checking element: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 10px;​">​Click Here​</a>​ Class: ad-click-guard-highlight Tag: A
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <a href=​"https:​/​/​rajeduboard.rajasthan.gov.in/​" target=​"_blank" rel=​"noreferrer noopener" class=​"ad-click-guard-highlight" data-highlight-type=​"action-button" style=​"transition:​ 0.3s;​ transform:​ scale(1)​;​ box-shadow:​ rgb(255, 215, 0)​ 0px 0px 10px;​">​Click Here​</a>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 58.9478%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 58.9478%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 58.9478%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 58.9478%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 58.9478%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 58.9478%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 58.9478%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 58.9478%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 58.9478%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 58.9478%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 58.9478%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 58.9478%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 58.9478%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 58.9478%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 58.9478%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 58.9478%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 58.9478%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 58.9478%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 67.1415%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 67.1415%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 67.1415%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 71.5626%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 71.5626%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 71.5626%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 73.2131%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 73.2131%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 73.2131%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.7065%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.7065%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.7065%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.7065%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.7065%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.7065%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.7065%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.7065%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.7065%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.7065%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.7065%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.7065%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.7065%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.7065%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.7065%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.7065%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.7065%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.7065%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:585 Processing new element: <span style=​"width:​ 74.9423%;​">​</span>​
+content.js:621 Checking element: <span style=​"width:​ 74.9423%;​">​</span>​ Class:  Tag: SPAN
+content.js:680 Element does not match any ad indicators
+content.js:598 Element does not need overlay: <span style=​"width:​ 74.9423%;​">​</span>​ has overlay: false
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
+content.js:138 processPageElements called, isInitialized: true isEnabled: true
