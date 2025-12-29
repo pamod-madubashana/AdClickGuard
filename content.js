@@ -644,12 +644,20 @@
     
     // Also watch for element mutations that might change its position
     const elementObserver = new MutationObserver(() => {
-      setTimeout(() => updateOverlayPosition(overlay, element), 0);
+      // Use requestAnimationFrame to avoid layout thrashing
+      if (window.requestAnimationFrame) {
+        window.requestAnimationFrame(() => {
+          updateOverlayPosition(overlay, element);
+        });
+      } else {
+        // Fallback for older browsers
+        setTimeout(() => updateOverlayPosition(overlay, element), 0);
+      }
     });
     
     elementObserver.observe(element, {
       attributes: true,
-      attributeFilter: ['style', 'class'],
+      attributeFilter: ['style', 'class', 'position'],
       childList: true,
       subtree: true
     });
