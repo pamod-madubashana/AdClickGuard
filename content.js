@@ -444,21 +444,32 @@
     // For sticky elements, wait 5 seconds to ensure they are fully loaded before adding overlay
     if (elementPosition === 'sticky') {
       console.debug('Detected sticky element, waiting 5 seconds to ensure it is fully loaded:', element);
-          
+            
       // Wait 5 seconds before creating overlay for sticky elements
       const stickyTimeout = setTimeout(() => {
         // Check if element still exists in the DOM before creating overlay
         if (document.contains(element) && !isAdElement(element)) {
-          console.debug('Sticky element still exists after 5 seconds, creating overlay');
-          
-          // Re-check all conditions without recursion by creating a new function
-          // that skips the sticky check to avoid infinite loop
-          createOverlayForSticky(element);
+          // Additional check: verify element is stable by checking it exists in multiple ways
+          const elementStillExists = document.contains(element) &&
+                                   element.parentNode &&
+                                   element.offsetParent !== null &&
+                                   element.getBoundingClientRect().width > 0 &&
+                                   element.getBoundingClientRect().height > 0;
+                
+          if (elementStillExists) {
+            console.debug('Sticky element still exists and is stable after 5 seconds, creating overlay');
+                  
+            // Re-check all conditions without recursion by creating a new function
+            // that skips the sticky check to avoid infinite loop
+            createOverlayForSticky(element);
+          } else {
+            console.debug('Sticky element is not stable, skipping overlay creation');
+          }
         } else {
           console.debug('Sticky element no longer exists or already has overlay, skipping');
         }
       }, 5000); // 5 seconds delay
-      
+            
       // Store the timeout reference on the element so we can clear it if needed
       element._stickyTimeout = stickyTimeout;
           
