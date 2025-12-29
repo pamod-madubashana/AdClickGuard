@@ -9,14 +9,13 @@
   const originalQuerySelector = document.querySelector;
   const originalQuerySelectorAll = document.querySelectorAll;
 
-  // Add a small delay to let other scripts initialize first
+  // Initialize immediately without waiting for full page load to add overlays as fast as possible
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initialize, 100); // Small delay to let other scripts initialize
-    });
+    // DOM still loading, initialize as early as possible
+    document.addEventListener('DOMContentLoaded', initialize);
   } else {
-    // DOM already loaded, initialize with a small delay
-    setTimeout(initialize, 100);
+    // DOM already loaded, initialize immediately
+    initialize();
   }
 
   // Configuration
@@ -41,44 +40,22 @@
 
 
   function initialize() {
-    // Wait for the page to fully load before starting
-    if (document.readyState === 'loading' || document.readyState === 'interactive') {
-      window.addEventListener('load', () => {
-        // Load configuration from storage
-        loadConfiguration().then(() => {
-          console.log('Content script initialized, current enabled state:', isEnabled);
-          isInitialized = true; // Mark as initialized
-          
-          // Listen for messages from popup
-          chrome.runtime.onMessage.addListener(handleMessage);
-          
-          // Start the extension if enabled
-          if (isEnabled) {
-            startAdGuard();
-          } else {
-            // Make sure everything is stopped if not enabled
-            stopAdGuard();
-          }
-        });
-      });
-    } else {
-      // Page is already loaded, initialize immediately
-      loadConfiguration().then(() => {
-        console.log('Content script initialized, current enabled state:', isEnabled);
-        isInitialized = true; // Mark as initialized
-        
-        // Listen for messages from popup
-        chrome.runtime.onMessage.addListener(handleMessage);
-        
-        // Start the extension if enabled
-        if (isEnabled) {
-          startAdGuard();
-        } else {
-          // Make sure everything is stopped if not enabled
-          stopAdGuard();
-        }
-      });
-    }
+    // Load configuration and start immediately without waiting for full page load
+    loadConfiguration().then(() => {
+      console.log('Content script initialized, current enabled state:', isEnabled);
+      isInitialized = true; // Mark as initialized
+      
+      // Listen for messages from popup
+      chrome.runtime.onMessage.addListener(handleMessage);
+      
+      // Start the extension if enabled
+      if (isEnabled) {
+        startAdGuard();
+      } else {
+        // Make sure everything is stopped if not enabled
+        stopAdGuard();
+      }
+    });
   }
 
   function loadConfiguration() {
