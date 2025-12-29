@@ -669,7 +669,7 @@ function detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogle
         const elements = document.querySelectorAll ? document.querySelectorAll(selector) : [];
         elements.forEach(element => {
           if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element) && isGoogleAdElement(element)) {
-            addAdOverlay(element, adElements, CONFIG);
+            addAdOverlay(element);
           }
         });
       } catch (e) {
@@ -692,7 +692,7 @@ function detectGoogleAds(adElements, CONFIG, isAdElement, addAdOverlay, isGoogle
         const elements = document.querySelectorAll ? document.querySelectorAll(selector) : [];
         elements.forEach(element => {
           if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
-            addAdOverlay(element, adElements, CONFIG);
+            addAdOverlay(element);
           }
         });
       } catch (e) {
@@ -714,7 +714,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     adIframes.forEach(element => {
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // These are definitely ads based on their source, add them directly
-        addAdOverlay(element, adElements, CONFIG);
+        addAdOverlay(element);
       }
     });
     
@@ -723,7 +723,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     potentialAdContainers.forEach(element => {
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // These are likely ad containers, add them directly
-        addAdOverlay(element, adElements, CONFIG);
+        addAdOverlay(element);
       }
     });
     
@@ -732,7 +732,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     googleAdElements.forEach(element => {
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // Elements with Google ad attributes are definitely ads, add them directly
-        addAdOverlay(element, adElements, CONFIG);
+        addAdOverlay(element);
       }
     });
     
@@ -741,7 +741,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     adsByGoogleElements.forEach(element => {
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // Elements with adsbygoogle class are definitely ads, add them directly
-        addAdOverlay(element, adElements, CONFIG);
+        addAdOverlay(element);
       }
     });
     
@@ -750,7 +750,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     gptElements.forEach(element => {
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // These are Google Publisher Tags which are definitely ads, add them directly
-        addAdOverlay(element, adElements, CONFIG);
+        addAdOverlay(element);
       }
     });
     
@@ -759,7 +759,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
     googleQueryIdElements.forEach(element => {
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // Elements with data-google-query-id are definitely Google ads
-        addAdOverlay(element, adElements, CONFIG);
+        addAdOverlay(element);
       }
     });
     
@@ -769,10 +769,10 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         if (element.classList && element.classList.contains('GoogleActiveViewElement')) {
           // This is definitely an ad, add it directly
-          addAdOverlay(element, adElements, CONFIG);
+          addAdOverlay(element);
         } else if (element.querySelector && element.querySelector('.GoogleActiveViewElement')) {
           // This is definitely an ad, add it directly
-          addAdOverlay(element, adElements, CONFIG);
+          addAdOverlay(element);
         }
       }
     });
@@ -789,7 +789,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
       if (element && element.nodeType === Node.ELEMENT_NODE && !isAdElement(element)) {
         // For common ad containers, apply confidence scoring to avoid false positives
         if (isElementLikelyAd(element)) {
-          addAdOverlay(element, adElements, CONFIG);
+          addAdOverlay(element);
         }
       }
     });
@@ -827,7 +827,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
           
           if (hasAdRelatedContent) {
             // This is definitely an ad container, add it directly
-            addAdOverlay(element, adElements, CONFIG);
+            addAdOverlay(element);
           }
         }
       }
@@ -848,7 +848,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
             elementDataSrc.includes('googleadservices') || elementDataSrc.includes('googletagservices') ||
             elementDataSrc.includes('pagead') || elementDataSrc.includes('tpc.goog')) {
           // This is definitely an ad element, add it directly
-          addAdOverlay(element, adElements, CONFIG);
+          addAdOverlay(element);
         }
         
         // Check for ad-related data attributes
@@ -861,7 +861,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
         
         if (hasAdRelatedAttr) {
           // This is definitely an ad element, add it directly
-          addAdOverlay(element, adElements, CONFIG);
+          addAdOverlay(element);
         }
         
         // Check for specific Google AdSense elements
@@ -869,7 +869,7 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, addAdOverlay, 
         if (elementId.includes('gpt-ad') || elementId.includes('google_ads') || 
             elementId.includes('div-gpt-ad') || elementId.includes('gpt_unit')) {
           // These are definitely ads, add them directly
-          addAdOverlay(element, adElements, CONFIG);
+          addAdOverlay(element);
         }
       }
     });
