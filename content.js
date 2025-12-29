@@ -555,17 +555,41 @@
     if (!overlay || !element) return;
     
     try {
+      // Get computed style to determine positioning type
+      const computedStyle = window.getComputedStyle(element);
+      const elementPosition = computedStyle.position;
+      
       // Get element position relative to viewport
       const rect = element.getBoundingClientRect();
       
-      // Calculate position relative to document
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      // Determine positioning strategy based on element's CSS position
+      if (elementPosition === 'fixed') {
+        // For fixed elements, use fixed positioning for the overlay
+        overlay.style.position = 'fixed';
+        overlay.style.top = rect.top + 'px';
+        overlay.style.left = rect.left + 'px';
+        console.debug('Overlay positioned fixed for element with position: fixed');
+      } else if (elementPosition === 'sticky') {
+        // For sticky elements, use fixed positioning when the element is stuck
+        // Check if the element is currently acting as fixed due to scrolling
+        const elementRect = element.getBoundingClientRect();
+        
+        // If element is currently in a 'fixed' state due to sticky behavior
+        overlay.style.position = 'fixed';
+        overlay.style.top = elementRect.top + 'px';
+        overlay.style.left = elementRect.left + 'px';
+        console.debug('Overlay positioned fixed for element with position: sticky');
+      } else {
+        // For static, relative, or absolute elements, use absolute positioning with scroll offsets
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        overlay.style.position = 'absolute';
+        overlay.style.top = (rect.top + scrollTop) + 'px';
+        overlay.style.left = (rect.left + scrollLeft) + 'px';
+      }
       
-      // Position the overlay
-      overlay.style.position = 'absolute';
-      overlay.style.top = (rect.top + scrollTop) + 'px';
-      overlay.style.left = (rect.left + scrollLeft) + 'px';
+      // Set dimensions
       overlay.style.width = rect.width + 'px';
       overlay.style.height = rect.height + 'px';
       overlay.style.zIndex = '2147483647'; // Maximum z-index
@@ -598,7 +622,6 @@
           overlay.style.height = element.offsetHeight + 'px';
         } else {
           // Fallback: if still zero, try to get from computed styles
-          const computedStyle = window.getComputedStyle(element);
           if (parseFloat(computedStyle.width) > 0 && parseFloat(computedStyle.height) > 0) {
             overlay.style.width = computedStyle.width;
             overlay.style.height = computedStyle.height;
