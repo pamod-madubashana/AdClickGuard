@@ -148,7 +148,7 @@ function detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement,
             if (isElementLikelyAd(element) || confidenceScore >= 4) {
               totalMatched++;
               console.log('🎯 Matched ad element with selector:', sanitizedSelector, 'Element:', element, 'Confidence:', confidenceScore);
-              addAdOverlay(element, adElements, CONFIG);
+              addAdOverlay(element);
             }
           }
         });
