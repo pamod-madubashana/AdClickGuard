@@ -414,7 +414,11 @@
     const rect = element.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+        
+    // Get computed style to determine positioning type
+    const computedStyle = window.getComputedStyle(element);
+    const elementPosition = computedStyle.position;
+        
     // Size safety rules: Do NOT overlay elements that are too large
     if (rect.width > viewportWidth * 0.9 ||  // More than 90% of viewport width
         rect.height > viewportHeight * 0.6 || // More than 60% of viewport height
@@ -423,20 +427,44 @@
       console.debug('Skipping overlay: element too large, positioned like container, or has near-zero dimensions:', element, 'Rect:', rect);
       return;
     }
-    
+        
     // Don't overlay elements that are too large or positioned like page containers (likely not ads)
     // If element is nearly the full viewport size and positioned at top-left, it's likely a page container, not an ad
     if ((rect.width > viewportWidth * 0.9 && rect.height > viewportHeight * 0.9)) {
       console.debug('Skipping overlay for element that covers most of viewport:', element, 'Rect:', rect);
       return;
     }
-    
+        
     // Check if element already has an associated overlay (duplicate prevention)
     if (isAdElement(element)) {
       console.debug('Element already has overlay, skipping duplicate:', element);
       return;
     }
-    
+        
+    // For sticky elements, wait 5 seconds to ensure they are fully loaded before adding overlay
+    if (elementPosition === 'sticky') {
+      console.debug('Detected sticky element, waiting 5 seconds to ensure it is fully loaded:', element);
+          
+      // Wait 5 seconds before creating overlay for sticky elements
+      const stickyTimeout = setTimeout(() => {
+        // Check if element still exists in the DOM before creating overlay
+        if (document.contains(element) && !isAdElement(element)) {
+          console.debug('Sticky element still exists after 5 seconds, creating overlay');
+          
+          // Re-check all conditions without recursion by creating a new function
+          // that skips the sticky check to avoid infinite loop
+          createOverlayForSticky(element);
+        } else {
+          console.debug('Sticky element no longer exists or already has overlay, skipping');
+        }
+      }, 5000); // 5 seconds delay
+      
+      // Store the timeout reference on the element so we can clear it if needed
+      element._stickyTimeout = stickyTimeout;
+          
+      return; // Don't add overlay immediately, wait for the delay
+    }
+          
     // Mark element as being processed to prevent race conditions
     // This ensures that if multiple detection functions run simultaneously,
     // only one will proceed to create an overlay
@@ -659,6 +687,230 @@
     overlay._elementObserver = elementObserver;
   }
   
+  function createOverlayForSticky(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
+    
+    // Additional check to avoid overlaying essential elements
+    const tagName = element.tagName.toLowerCase();
+    const className = element.className.toLowerCase();
+    const id = element.id ? element.id.toLowerCase() : '';
+    
+    // Don't overlay essential page elements
+    const essentialElements = ['body', 'html', 'head', 'header', 'footer', 'nav', 'main', 'article', 'section', 'aside'];
+    if (essentialElements.includes(tagName) ||
+        element === document.body || 
+        element === document.documentElement) {
+      console.debug('Skipping overlay for essential element:', element);
+      return;
+    }
+    
+    // Additional check for elements that are likely page containers based on attributes
+    if ((tagName === 'div' && 
+         (className.includes('container') || className.includes('wrapper') || 
+          className.includes('layout') || className.includes('page') || className.includes('site')) &&
+         !className.includes('ad') && !className.includes('advertisement') && !className.includes('banner')) ||
+        ((id.includes('container') || id.includes('wrapper') || id.includes('layout') || id.includes('main') || id.includes('content')) &&
+         !id.includes('ad') && !id.includes('advertisement') && !id.includes('banner'))) {
+      console.debug('Skipping overlay for likely page container element:', element);
+      return;
+    }
+    
+    // Don't overlay if parent element already has an overlay
+    if (hasParentAdOverlay(element)) {
+      console.debug('Parent element already has overlay, skipping child:', element);
+      return;
+    }
+    
+    // Get element metrics for size validation
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Size safety rules: Do NOT overlay elements that are too large
+    if (rect.width > viewportWidth * 0.9 ||  // More than 90% of viewport width
+        rect.height > viewportHeight * 0.6 || // More than 60% of viewport height
+        (rect.width > viewportWidth * 0.95 && rect.top <= 1 && rect.left <= 1) || // Positioned at top-left like a container
+        (rect.width < 2 || rect.height < 2)) { // Zero or near-zero dimensions
+      console.debug('Skipping overlay: element too large, positioned like container, or has near-zero dimensions:', element, 'Rect:', rect);
+      return;
+    }
+    
+    // Don't overlay elements that are too large or positioned like page containers (likely not ads)
+    // If element is nearly the full viewport size and positioned at top-left, it's likely a page container, not an ad
+    if ((rect.width > viewportWidth * 0.9 && rect.height > viewportHeight * 0.9)) {
+      console.debug('Skipping overlay for element that covers most of viewport:', element, 'Rect:', rect);
+      return;
+    }
+    
+    // Check if element already has an associated overlay (duplicate prevention)
+    if (isAdElement(element)) {
+      console.debug('Element already has overlay, skipping duplicate:', element);
+      return;
+    }
+    
+    // Check if element still exists before proceeding
+    if (!document.contains(element)) {
+      console.debug('Element no longer exists in DOM, skipping overlay creation');
+      adElements.delete(element);
+      return;
+    }
+    
+    // Mark element as being processed to prevent race conditions
+    // This ensures that if multiple detection functions run simultaneously,
+    // only one will proceed to create an overlay
+    adElements.set(element, true);
+    
+    try {
+      // Create overlay element
+      const overlay = document.createElement('div');
+      overlay.className = 'ad-click-guard-overlay';
+      overlay.setAttribute('data-ad-element', true);
+      
+      // Store reference to the original element on the overlay
+      overlay._adElement = element;
+      
+      // Position the overlay absolutely over the ad element
+      updateOverlayPosition(overlay, element);
+      
+      // Add overlay to document body
+      if (document.body) {
+        document.body.appendChild(overlay);
+      } else {
+        // If body isn't ready yet, try to append to documentElement
+        document.documentElement.appendChild(overlay);
+      }
+      
+      // Update the mapping to use the actual overlay element
+      adElements.set(element, overlay);
+      
+      // Add resize and scroll listeners to keep overlay positioned correctly
+      setupOverlayListeners(element, overlay);
+      
+      // Log successful overlay addition
+      console.log('✅ Successfully added ad overlay for element:', element, 'Tag:', element.tagName, 'Class:', element.className, 'ID:', element.id);
+      
+      // Log element attributes for debugging
+      if (element.src) console.debug('  Element src:', element.src);
+      if (element.attributes) {
+        for (let attr of element.attributes) {
+          if (attr.name.includes('ad') || attr.name.includes('google') || attr.value.includes('google') || attr.value.includes('ad')) {
+            console.debug('  Ad-related attribute:', attr.name, '=', attr.value);
+          }
+        }
+      }
+      
+      // Additional logging to help identify which elements are being covered
+      console.debug('  Element position:', element.getBoundingClientRect());
+      console.debug('  Element dimensions:', element.offsetWidth, 'x', element.offsetHeight);
+      console.debug('  Element text content length:', element.textContent ? element.textContent.trim().length : 0);
+      
+      // Set up a MutationObserver to watch for when the element is removed from DOM
+      const removalObserver = new MutationObserver(() => {
+        // Check if the element is still in the DOM
+        if (!document.contains(element)) {
+          // Element has been removed, clean up the overlay
+          console.debug('Ad element removed from DOM, cleaning up overlay:', element);
+          
+          // Remove event listeners
+          if (overlay._scrollListener) {
+            window.removeEventListener('scroll', overlay._scrollListener);
+          }
+          if (overlay._resizeListener) {
+            window.removeEventListener('resize', overlay._resizeListener);
+          }
+          if (overlay._elementObserver) {
+            overlay._elementObserver.disconnect();
+          }
+          
+          // Clear intervals
+          if (overlay._visibilityInterval) {
+            clearInterval(overlay._visibilityInterval);
+          }
+          
+          // Remove overlay from DOM
+          if (overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
+          
+          // Remove from the map
+          adElements.delete(element);
+          
+          // Disconnect this observer
+          removalObserver.disconnect();
+        }
+      });
+      
+      // Start observing for element removal
+      if (document.body) {
+        removalObserver.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+      
+      // Store the removal observer reference so we can disconnect it later
+      overlay._removalObserver = removalObserver;
+      
+      // Special handling for elements that might be hidden initially (like Google ads)
+      // Set up a MutationObserver to watch for style changes that make the element visible
+      const elementObserver = new MutationObserver(() => {
+        // Update overlay position when element becomes visible
+        // Use requestAnimationFrame to avoid layout thrashing
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(() => {
+            updateOverlayPosition(overlay, element);
+            
+            // If element is now visible but overlay wasn't properly positioned, fix it
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              overlay.style.display = 'block';
+              overlay.style.visibility = 'visible';
+            }
+          });
+        } else {
+          // Fallback for older browsers
+          setTimeout(() => {
+            updateOverlayPosition(overlay, element);
+            
+            // If element is now visible but overlay wasn't properly positioned, fix it
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              overlay.style.display = 'block';
+              overlay.style.visibility = 'visible';
+            }
+          }, 0);
+        }
+      });
+      
+      elementObserver.observe(element, {
+        attributes: true,
+        attributeFilter: ['style', 'class', 'width', 'height', 'display', 'visibility', 'opacity', 'position']
+      });
+      
+      // Store the observer reference so we can disconnect it later
+      overlay._elementObserver = elementObserver;
+      
+      // Also check periodically if the element becomes visible
+      const visibilityInterval = setInterval(() => {
+        const rect = element.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0 && element.offsetParent !== null) {
+          // Element is visible, update position and make sure overlay is visible
+          updateOverlayPosition(overlay, element);
+          overlay.style.display = 'block';
+          overlay.style.visibility = 'visible';
+          clearInterval(visibilityInterval); // Stop checking once visible
+        }
+      }, 500); // Check every 500ms
+      
+      // Store the interval reference so we can clear it later
+      overlay._visibilityInterval = visibilityInterval;
+    } catch (e) {
+      // If there was an error, clean up by removing the element from the map
+      adElements.delete(element);
+      console.error('❌ Error adding ad overlay:', e, 'Element:', element);
+    }
+  }
+  
   function removeAdOverlays() {
     // Remove all overlays
     adElements.forEach((overlay, element) => {
@@ -676,6 +928,11 @@
       // Clear visibility interval if it exists
       if (overlay._visibilityInterval) {
         clearInterval(overlay._visibilityInterval);
+      }
+      
+      // Clear sticky element timeout if it exists
+      if (overlay._stickyTimeout) {
+        clearTimeout(overlay._stickyTimeout);
       }
       
       // Remove overlay from DOM
