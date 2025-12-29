@@ -510,21 +510,36 @@
       // Set up a MutationObserver to watch for style changes that make the element visible
       const elementObserver = new MutationObserver(() => {
         // Update overlay position when element becomes visible
-        setTimeout(() => {
-          updateOverlayPosition(overlay, element);
-          
-          // If element is now visible but overlay wasn't properly positioned, fix it
-          const rect = element.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            overlay.style.display = 'block';
-            overlay.style.visibility = 'visible';
-          }
-        }, 100);
+        // Use requestAnimationFrame to avoid layout thrashing
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(() => {
+            updateOverlayPosition(overlay, element);
+            
+            // If element is now visible but overlay wasn't properly positioned, fix it
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              overlay.style.display = 'block';
+              overlay.style.visibility = 'visible';
+            }
+          });
+        } else {
+          // Fallback for older browsers
+          setTimeout(() => {
+            updateOverlayPosition(overlay, element);
+            
+            // If element is now visible but overlay wasn't properly positioned, fix it
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              overlay.style.display = 'block';
+              overlay.style.visibility = 'visible';
+            }
+          }, 0);
+        }
       });
       
       elementObserver.observe(element, {
         attributes: true,
-        attributeFilter: ['style', 'class', 'width', 'height', 'display', 'visibility', 'opacity']
+        attributeFilter: ['style', 'class', 'width', 'height', 'display', 'visibility', 'opacity', 'position']
       });
       
       // Store the observer reference so we can disconnect it later
