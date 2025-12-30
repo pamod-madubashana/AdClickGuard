@@ -264,9 +264,12 @@ class CountdownWatcher {
   checkForNumericChange(element, currentText) {
     const currentValue = this.extractNumericValue(currentText);
     
+    console.log('CountdownWatcher: Processing text change for element:', element, 'text:', currentText, 'extracted value:', currentValue);
+    
     if (currentValue === null) {
       // If element no longer has a valid numeric value, remove from tracking
       if (this.elementTracker.has(element)) {
+        console.log('CountdownWatcher: Removing element from tracking - no valid numeric value');
         this.elementTracker.delete(element);
       }
       return;
@@ -276,6 +279,7 @@ class CountdownWatcher {
     if (currentValue < this.options.minimumDuration || currentValue > this.options.maximumDuration) {
       // If value is outside our range, remove from tracking
       if (this.elementTracker.has(element)) {
+        console.log('CountdownWatcher: Removing element from tracking - value', currentValue, 'outside range [', this.options.minimumDuration, ',', this.options.maximumDuration, ']');
         this.elementTracker.delete(element);
       }
       return;
@@ -284,6 +288,8 @@ class CountdownWatcher {
     // Check if we're already tracking this element
     if (this.elementTracker.has(element)) {
       const tracker = this.elementTracker.get(element);
+      
+      console.log('CountdownWatcher: Element was tracked with value', tracker.lastValue, 'now', currentValue);
       
       // If the value has decreased, increment the consecutive decrease counter
       if (currentValue < tracker.lastValue) {
@@ -301,11 +307,17 @@ class CountdownWatcher {
           // Continue monitoring until countdown reaches zero
           this.continueMonitoring(element, currentValue);
         }
-      } else if (currentValue >= tracker.lastValue) {
-        // Value didn't decrease, reset the counter
+      } else if (currentValue > tracker.lastValue) {
+        // Value increased, reset the counter
+        console.log('CountdownWatcher: Value increased from', tracker.lastValue, 'to', currentValue, ', resetting counter');
         tracker.lastValue = currentValue;
         tracker.lastCheckTime = Date.now();
         tracker.consecutiveDecreases = 0;
+      } else {
+        // Value stayed the same, keep the counter as is
+        console.log('CountdownWatcher: Value remained the same at', currentValue, ', counter unchanged:', tracker.consecutiveDecreases);
+        tracker.lastValue = currentValue;
+        tracker.lastCheckTime = Date.now();
       }
     } else {
       // First time seeing this element with valid countdown value, add to tracker
@@ -317,8 +329,11 @@ class CountdownWatcher {
       
       console.log('CountdownWatcher: Started tracking element with numeric value', currentValue, element);
     }
+      
+    // Start active monitoring for this element to catch changes
+    this.startActiveMonitoring(element);
   }
-  
+    
   /**
    * Continue monitoring a confirmed countdown until it reaches zero
    */
@@ -346,6 +361,7 @@ class CountdownWatcher {
       if (this.elementTracker.has(element)) {
         // Re-check the element's text content
         const currentText = this.getTextContent(element);
+        console.log('CountdownWatcher: Re-checking element text:', currentText, 'for element:', element);
         this.checkForNumericChange(element, currentText);
       }
     }, this.options.validationDelay);
@@ -467,6 +483,9 @@ class CountdownWatcher {
     
     // Add temporary CSS if not already present
     this.addFocusEffectStyles();
+    
+    // Create an overlay element for enhanced visibility
+    this.createOverlayEffect(element);
 
     // Set timeout to remove the effect after the specified duration
     if (this.focusEffectTimeout) {
@@ -477,9 +496,82 @@ class CountdownWatcher {
       if (element && element.classList) {
         element.classList.remove('countdown-focus-effect');
       }
+      // Remove the overlay
+      this.removeOverlayEffect(element);
     }, this.options.focusEffectDuration);
 
     console.log('CountdownWatcher: Applied focus effect to countdown element', element);
+  }
+  
+  /**
+   * Create an overlay element for enhanced visibility
+   */
+  createOverlayEffect(element) {
+    // Remove any existing overlay for this element
+    this.removeOverlayEffect(element);
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'countdown-focus-overlay';
+    
+    // Function to update overlay position
+    const updatePosition = () => {
+      if (!document.contains(overlay) || !document.contains(element)) return;
+      
+      const rect = element.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      
+      overlay.style.top = (rect.top + scrollTop - 10) + 'px';
+      overlay.style.left = (rect.left + scrollLeft - 10) + 'px';
+      overlay.style.width = (rect.width + 20) + 'px';
+      overlay.style.height = (rect.height + 20) + 'px';
+    };
+    
+    // Position the overlay around the element
+    updatePosition();
+    
+    overlay.style.position = 'absolute';
+    overlay.style.border = '3px solid #ff6b6b';
+    overlay.style.borderRadius = '50%';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.zIndex = '9999';
+    overlay.style.boxSizing = 'border-box';
+    overlay.style.animation = 'countdown-overlay-pulse 1s infinite alternate';
+    overlay.style.boxShadow = '0 0 20px rgba(255, 107, 107, 0.7)';
+    
+    // Mark this element as added by the extension to avoid observing it
+    this.markAsExtensionElement(overlay);
+    
+    document.body.appendChild(overlay);
+    
+    // Store reference to the overlay
+    element.countdownOverlay = overlay;
+    
+    // Set up position update interval
+    const positionInterval = setInterval(() => {
+      if (!document.contains(overlay) || !document.contains(element)) {
+        clearInterval(positionInterval);
+        return;
+      }
+      updatePosition();
+    }, 100); // Update position every 100ms
+    
+    // Store interval reference to clear later
+    overlay.positionInterval = positionInterval;
+  }
+  
+  /**
+   * Remove the overlay effect
+   */
+  removeOverlayEffect(element) {
+    if (element.countdownOverlay && document.contains(element.countdownOverlay)) {
+      // Clear the position update interval
+      if (element.countdownOverlay.positionInterval) {
+        clearInterval(element.countdownOverlay.positionInterval);
+      }
+      document.body.removeChild(element.countdownOverlay);
+      element.countdownOverlay = null;
+    }
   }
 
   /**
@@ -545,11 +637,49 @@ class CountdownWatcher {
           opacity: 0.3;
         }
       }
+      
+      @keyframes countdown-overlay-pulse {
+        0% {
+          transform: scale(1);
+          opacity: 0.7;
+        }
+        100% {
+          transform: scale(1.1);
+          opacity: 0.4;
+        }
+      }
     `;
     
     document.head.appendChild(style);
   }
-
+  
+  /**
+   * Start active monitoring for an element to catch changes
+   */
+  startActiveMonitoring(element) {
+    // Set up an interval to periodically check the element's text content
+    // This is a backup to the MutationObserver to ensure we catch changes
+    if (element.countdownMonitorInterval) {
+      clearInterval(element.countdownMonitorInterval);
+    }
+    
+    element.countdownMonitorInterval = setInterval(() => {
+      if (!document.contains(element)) {
+        // Element is no longer in DOM, stop monitoring
+        if (element.countdownMonitorInterval) {
+          clearInterval(element.countdownMonitorInterval);
+          element.countdownMonitorInterval = null;
+        }
+        return;
+      }
+      
+      const currentText = this.getTextContent(element);
+      if (currentText.trim()) {
+        this.checkForNumericChange(element, currentText);
+      }
+    }, 500); // Check every 500ms
+  }
+  
   /**
    * Mark an element as being added by the extension to avoid observing it
    */
