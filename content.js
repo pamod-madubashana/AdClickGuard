@@ -33,9 +33,13 @@
   let adElements = new Map(); // Track ad elements and their overlays
   let filterListLoaded = false;
   let filterLoadPromise = null;
-  let detectionInProgress = false; // Prevent duplicate detection runs
+  let detectionInProgress = false; // Prevent duplicate detection runs (global lock)
   let detectionTimeout = null; // For debouncing
   let periodicDetectionInterval = null; // For periodic detection
+  let idleState = false; // Track if detection is in idle state
+  let lastDetectionHadAds = false; // Track if last detection found new ads
+  let mutationQueue = []; // Queue for mutations to process in batches
+  let mutationProcessingScheduled = false; // Flag to ensure only one batch process is scheduled
 
 
 
@@ -206,56 +210,23 @@
   function startAdGuard() {
     console.log('startAdGuard called, isInitialized:', isInitialized);
     
+    // Reset idle state when starting
+    idleState = false;
+    
     // Run immediate high-confidence detection for Google Publisher Tags and other known ad elements
     detectHighConfidenceAds();
     
     // Detect and overlay ad elements
     detectAndOverlayAds();
     
-    // Run a more comprehensive scan immediately
-    setTimeout(() => {
-      detectHighConfidenceAds();
-      detectAndOverlayAds();
-    }, 100);
-    
-    // Run another scan to catch ads that might have loaded
-    setTimeout(() => {
-      detectHighConfidenceAds();
-      detectAndOverlayAds();
-    }, 300);
-    
-    // Run another scan for late-loading ads
-    setTimeout(() => {
-      detectHighConfidenceAds();
-    }, 800);
-    
     // Set up MutationObserver to handle dynamic content
     setupMutationObserver();
     
-    // Run additional scans periodically
+    // Remove periodic detection interval to prevent loops - rely on MutationObserver
     if (periodicDetectionInterval) {
       clearInterval(periodicDetectionInterval);
+      periodicDetectionInterval = null;
     }
-    periodicDetectionInterval = setInterval(() => {
-      if (isEnabled) {
-        detectHighConfidenceAds();
-        detectAndOverlayAds();
-        // Also run Google-specific detection
-        detectGoogleAds();
-      }
-    }, 3000); // Every 3 seconds - more frequent for Google ads
-    
-    // Run an initial scan for ads that might be already present
-    setTimeout(() => {
-      detectHighConfidenceAds();
-      detectAndOverlayAds();
-    }, 1500);
-    
-    // Final comprehensive scan
-    setTimeout(() => {
-      detectHighConfidenceAds();
-      detectAndOverlayAds();
-    }, 3000);
   }
 
   function stopAdGuard() {
@@ -290,34 +261,66 @@
   }
   
   function detectAndOverlayAds() {
-    if (!isInitialized || !isEnabled || !filterListLoaded || detectionInProgress) return;
+    if (!isInitialized || !isEnabled || !filterListLoaded || detectionInProgress) {
+      // Log why detection is skipped for debugging
+      if (detectionInProgress) {
+        console.debug('Detection skipped: already in progress');
+      }
+      return;
+    }
+    
+    console.debug('Starting detection cycle');
     
     // Set detection in progress flag
     detectionInProgress = true;
     
+    // Track if any new ads were found in this cycle
+    const initialAdCount = adElements.size;
+    
     // Use the detectAndOverlayAds function from adDetection.js
     window.adDetection.detectAndOverlayAds(cosmeticSelectors, adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, calculateAdConfidence, isElementLikelyAd);
     
-    // Additional comprehensive scan to catch any missed ads
-    setTimeout(() => {
-      // Run a second pass to catch ads that might have been missed
-      // This is especially important for dynamically loaded content
-      detectHighConfidenceAds();
-    }, 300);
+    // Check if any new ads were found
+    const newAdCount = adElements.size;
+    const newAdsFound = newAdCount > initialAdCount;
+    
+    // Update idle state based on whether new ads were found
+    if (!newAdsFound && initialAdCount > 0) {
+      idleState = true;
+      console.debug('Detection entered idle state - no new ads found');
+    } else if (newAdsFound) {
+      idleState = false;
+      lastDetectionHadAds = true;
+      console.debug('New ads found, staying active');
+    }
     
     // Reset the flag after a short delay
     setTimeout(() => {
       detectionInProgress = false;
+      console.debug('Detection cycle completed');
     }, 100);
   }
   
   function detectGoogleAds() {
     // Use the detectGoogleAds function from adDetection.js
+    // Only run if not already in detection progress to prevent re-entrancy
+    if (detectionInProgress) {
+      console.debug('Google ads detection skipped: detection already in progress');
+      return;
+    }
+    
     window.adDetection.detectGoogleAds(adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, isGoogleAdElement);
   }
   
   function detectHighConfidenceAds() {
     // Use the detectHighConfidenceAds function from adDetection.js
+    // Only run if not already in detection progress to prevent re-entrancy
+    if (detectionInProgress) {
+      console.debug('High confidence detection skipped: detection already in progress');
+      return;
+    }
+    
+    // Run high confidence detection
     window.adDetection.detectHighConfidenceAds(adElements, CONFIG, isAdElement, hasParentAdOverlay, addAdOverlay, isElementLikelyAd, calculateAdConfidence);
   }
   
@@ -377,6 +380,8 @@
         
       element._overlayBeingCreated = true;
         
+      console.debug('Attempting to create overlay for element:', element, 'Tag:', element.tagName, 'Class:', element.className, 'ID:', element.id);
+      
       // Use the new createAdOverlay function from adDetection.js which handles anchor selection
       const overlay = window.adDetection.createAdOverlay(element);
         
@@ -783,135 +788,154 @@
       observer = new MutationObserver((mutations) => {
         if (!isEnabled) return;
         
-        let adsDetected = false;
+        // Filter out mutations caused by our own overlays to prevent infinite loops
+        const filteredMutations = mutations.filter(mutation => {
+          if (mutation.type === 'childList') {
+            return Array.from(mutation.addedNodes).every(node => {
+              // Skip mutations that involve our overlay elements
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                return !node.classList || !node.classList.contains('ad-click-guard-overlay');
+              }
+              return true;
+            });
+          }
+          return true;
+        });
         
-        try {
-          mutations.forEach((mutation) => {
-            // Process new nodes added to the DOM
-            if (mutation.type === 'childList') {
-              mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                  // Process the new element
-                  processNewElement(node);
-                  
-                  // Check for ad elements in the new node
-                  if (isEnabled && filterListLoaded) {
-                    checkNewNodeForAds(node);
-                    adsDetected = true;
-                  }
-                  
-                  // Process all descendants of the new element
-                  try {
-                    const walker = document.createTreeWalker(
-                      node,
-                      NodeFilter.SHOW_ELEMENT,
-                      null,
-                      false
-                    );
-                    
-                    let currentNode;
-                    while (currentNode = walker.nextNode()) {
-                      processNewElement(currentNode);
+        // If no valid mutations remain after filtering, return early
+        if (filteredMutations.length === 0) {
+          return;
+        }
+        
+        // Add mutations to queue for batch processing
+        mutationQueue.push(...filteredMutations);
+        
+        // Schedule batch processing if not already scheduled
+        if (!mutationProcessingScheduled) {
+          mutationProcessingScheduled = true;
+          
+          // Use requestAnimationFrame to batch process mutations
+          requestAnimationFrame(() => {
+            // Process all queued mutations
+            const batchMutations = [...mutationQueue];
+            mutationQueue = [];
+            mutationProcessingScheduled = false;
+            
+            // Process the batch
+            let newAdElementsDetected = false;
+            
+            try {
+              batchMutations.forEach((mutation) => {
+                // Process new nodes added to the DOM
+                if (mutation.type === 'childList') {
+                  mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                      // Check if this is our own overlay to ignore
+                      if (node.classList && node.classList.contains('ad-click-guard-overlay')) {
+                        return; // Skip our own overlays
+                      }
                       
-                      // Check each descendant for ads
+                      // Process the new element
+                      processNewElement(node);
+                      
+                      // Check for ad elements in the new node
                       if (isEnabled && filterListLoaded) {
-                        checkElementForAds(currentNode);
-                        adsDetected = true;
+                        checkNewNodeForAds(node);
+                        newAdElementsDetected = true;
+                      }
+                      
+                      // Process all descendants of the new element
+                      try {
+                        const walker = document.createTreeWalker(
+                          node,
+                          NodeFilter.SHOW_ELEMENT,
+                          null,
+                          false
+                        );
+                        
+                        let currentNode;
+                        while (currentNode = walker.nextNode()) {
+                          // Skip our own overlay elements
+                          if (currentNode.classList && currentNode.classList.contains('ad-click-guard-overlay')) {
+                            continue;
+                          }
+                          
+                          processNewElement(currentNode);
+                          
+                          // Check each descendant for ads
+                          if (isEnabled && filterListLoaded) {
+                            checkElementForAds(currentNode);
+                            newAdElementsDetected = true;
+                          }
+                        }
+                      } catch (e) {
+                        console.debug('Error traversing tree walker:', e);
                       }
                     }
-                  } catch (e) {
-                    console.debug('Error traversing tree walker:', e);
+                  });
+                }
+                // Process attribute changes (e.g. class changes that might make an element an ad)
+                else if (mutation.type === 'attributes') {
+                  if (mutation.target.nodeType === Node.ELEMENT_NODE) {
+                    // Skip our own overlay elements
+                    if (mutation.target.classList && mutation.target.classList.contains('ad-click-guard-overlay')) {
+                      return;
+                    }
+                    
+                    processNewElement(mutation.target);
+                              
+                    // Check if the attribute change made this an ad element
+                    if (isEnabled && filterListLoaded) {
+                      checkElementForAds(mutation.target);
+                      newAdElementsDetected = true;
+                                
+                      // Specifically check for Google Publisher Tags and other ad elements that might be added via attribute changes
+                      const target = mutation.target;
+                      const elementId = target.id || '';
+                                
+                      // Check for Google Publisher Tags
+                      if (elementId.includes('gpt-ad') || elementId.includes('google_ads') || 
+                          elementId.includes('div-gpt-ad') || elementId.includes('gpt_unit')) {
+                        if (!isAdElement(target) && !hasParentAdOverlay(target)) {
+                          addAdOverlay(target);
+                        }
+                      }
+                                
+                      // Check for elements with data-google-query-id (high confidence Google ads)
+                      if (target.hasAttribute('data-google-query-id') && !isAdElement(target) && !hasParentAdOverlay(target)) {
+                        addAdOverlay(target);
+                      }
+                                
+                      // Check for Google ad attributes
+                      if ((target.hasAttribute('data-ad-client') ||
+                          target.hasAttribute('data-google-av-ad') ||
+                          target.hasAttribute('data-google-av-element') ||
+                          target.hasAttribute('data-ad-slot') ||
+                          target.hasAttribute('data-ad-format')) && !isAdElement(target) && !hasParentAdOverlay(target)) {
+                        addAdOverlay(target);
+                      }
+                                
+                      // Check for GoogleActiveViewElement class
+                      if (target.classList && target.classList.contains('GoogleActiveViewElement') && !isAdElement(target) && !hasParentAdOverlay(target)) {
+                        addAdOverlay(target);
+                      }
+                    }
                   }
                 }
               });
+            } catch (e) {
+              console.debug('Error processing mutations:', e);
             }
-            // Process attribute changes (e.g. class changes that might make an element an ad)
-            else if (mutation.type === 'attributes') {
-              if (mutation.target.nodeType === Node.ELEMENT_NODE) {
-                processNewElement(mutation.target);
-                          
-                // Check if the attribute change made this an ad element
-                if (isEnabled && filterListLoaded) {
-                  checkElementForAds(mutation.target);
-                  adsDetected = true;
-                            
-                  // Specifically check for Google Publisher Tags and other ad elements that might be added via attribute changes
-                  const target = mutation.target;
-                  const elementId = target.id || '';
-                            
-                  // Check for Google Publisher Tags
-                  if (elementId.includes('gpt-ad') || elementId.includes('google_ads') || 
-                      elementId.includes('div-gpt-ad') || elementId.includes('gpt_unit')) {
-                    if (!isAdElement(target) && !hasParentAdOverlay(target)) {
-                      addAdOverlay(target);
-                    }
-                  }
-                            
-                  // Check for elements with data-google-query-id (high confidence Google ads)
-                  if (target.hasAttribute('data-google-query-id') && !isAdElement(target) && !hasParentAdOverlay(target)) {
-                    addAdOverlay(target);
-                  }
-                            
-                  // Check for Google ad attributes
-                  if ((target.hasAttribute('data-ad-client') ||
-                      target.hasAttribute('data-google-av-ad') ||
-                      target.hasAttribute('data-google-av-element') ||
-                      target.hasAttribute('data-ad-slot') ||
-                      target.hasAttribute('data-ad-format')) && !isAdElement(target) && !hasParentAdOverlay(target)) {
-                    addAdOverlay(target);
-                  }
-                            
-                  // Check for GoogleActiveViewElement class
-                  if (target.classList && target.classList.contains('GoogleActiveViewElement') && !isAdElement(target) && !hasParentAdOverlay(target)) {
-                    addAdOverlay(target);
-                  }
-                }
-              }
+            
+            // Only run detection if new ad elements were detected and not already in progress
+            if (newAdElementsDetected && !detectionInProgress && !idleState) {
+              // Schedule detection with a small delay to allow elements to be fully rendered
+              setTimeout(() => {
+                detectHighConfidenceAds();
+                detectAndOverlayAds();
+              }, 100);
             }
           });
-        } catch (e) {
-          console.debug('Error processing mutations:', e);
-        }
-        
-        // If ads were detected, run high-confidence detection to catch any missed ads
-        if (adsDetected) {
-          // Only schedule detection if not already in progress
-          if (!detectionInProgress) {
-            setTimeout(() => {
-              detectHighConfidenceAds();
-            }, 100); // Small delay to allow elements to be fully rendered
-          }
-        }
-        
-        // Re-process the entire page periodically to catch any missed elements
-        // Only schedule if not already scheduled
-        if (!detectionTimeout) {
-          detectionTimeout = setTimeout(() => {
-            if (isEnabled && !detectionInProgress) {
-              detectHighConfidenceAds(); // Run high-confidence detection only
-            }
-            detectionTimeout = null; // Reset timeout flag
-          }, 500); // Increased delay to reduce overlap
-        }
-        
-        // Run EasyList-based detection less frequently and only if not in progress
-        if (!detectionInProgress) {
-          setTimeout(() => {
-            if (isEnabled && !detectionInProgress) {
-              detectAndOverlayAds();
-            }
-          }, 600); // Reduced frequency
-        }
-        
-        // Additional check for Google AdSense ads that might have loaded
-        if (!detectionInProgress) {
-          setTimeout(() => {
-            if (isEnabled && !detectionInProgress) {
-              detectHighConfidenceAds();
-              // Run additional Google AdSense specific detection
-              detectGoogleAds();
-            }
-          }, 1000); // Reduced frequency
         }
       });
       
@@ -1152,8 +1176,11 @@
         clearTimeout(detectionTimeout);
       }
       detectionTimeout = setTimeout(() => {
-        detectHighConfidenceAds(); // Run high-confidence detection first
-        detectAndOverlayAds(); // Then run EasyList-based detection
+        // Only run if not already in progress
+        if (!detectionInProgress) {
+          detectHighConfidenceAds(); // Run high-confidence detection first
+          detectAndOverlayAds(); // Then run EasyList-based detection
+        }
       }, 100);
     }
   });
