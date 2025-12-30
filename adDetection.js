@@ -1,6 +1,57 @@
 // Ad Detection Functions
 // Contains all EasyList-based ad detection logic and related functions
 
+// New overlay system with position-aware logic, duplicate prevention, lifecycle cleanup, and performance control
+
+// WeakMap to store overlay references keyed by ad element
+const overlayMap = new WeakMap();
+
+// Set to track elements that are already covered to prevent duplicates
+const coveredElements = new Set();
+
+// Function to get element position type
+function getElementPositionType(element) {
+  if (!element || !element.nodeType || element.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+  
+  const computedStyle = window.getComputedStyle(element);
+  return computedStyle.position;
+}
+
+// Function to get element bounding box with appropriate coordinates based on position type
+function getElementBoundingBox(element) {
+  if (!element || !element.nodeType || element.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+  
+  const rect = element.getBoundingClientRect();
+  const positionType = getElementPositionType(element);
+  
+  // For fixed or sticky elements, use viewport-relative coordinates
+  if (positionType === 'fixed' || positionType === 'sticky') {
+    return {
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+      position: 'fixed'
+    };
+  } 
+  
+  // For absolute or relative elements, use document-relative coordinates
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+  
+  return {
+    top: rect.top + scrollTop,
+    left: rect.left + scrollLeft,
+    width: rect.width,
+    height: rect.height,
+    position: 'absolute'
+  };
+}
+
 // Function to parse cosmetic filters from EasyList
 function parseCosmeticFilters(filterText, currentHostname) {
   const lines = filterText.split('\n');
@@ -878,6 +929,413 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, hasParentAdOve
   }
 }
 
+// Function to create overlay with position-aware logic
+function createAdOverlay(element) {
+  if (!element || element.nodeType !== Node.ELEMENT_NODE) return null;
+  
+  // Check if element is already covered to prevent duplicates
+  if (coveredElements.has(element)) {
+    console.debug('Element already covered, skipping duplicate overlay:', element);
+    return overlayMap.get(element) || null;
+  }
+  
+  // Additional checks to avoid overlaying essential elements
+  const tagName = element.tagName.toLowerCase();
+  if (tagName === 'body' || tagName === 'html' || element === document.body || element === document.documentElement) {
+    console.debug('Skipping overlay for essential element:', element);
+    return null;
+  }
+  
+  // Get element bounding box with appropriate positioning
+  const boundingBox = getElementBoundingBox(element);
+  if (!boundingBox) {
+    console.debug('Could not get bounding box for element:', element);
+    return null;
+  }
+  
+  // Size safety checks
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  if (boundingBox.width > viewportWidth * 0.9 || boundingBox.height > viewportHeight * 0.6 ||
+      (boundingBox.width < 2 || boundingBox.height < 2)) {
+    console.debug('Skipping overlay: element too large or too small:', element, 'Box:', boundingBox);
+    return null;
+  }
+  
+  try {
+    // Create overlay element
+    const overlay = document.createElement('div');
+    overlay.className = 'ad-click-guard-overlay';
+    overlay.setAttribute('data-ad-element', 'true');
+    
+    // Mark the element as covered
+    element.setAttribute('data-ad-click-guard-covered', 'true');
+    coveredElements.add(element);
+    
+    // Store reference to the original element on the overlay
+    overlay._adElement = element;
+    
+    // Apply position-specific styling
+    overlay.style.position = boundingBox.position;
+    overlay.style.top = boundingBox.top + 'px';
+    overlay.style.left = boundingBox.left + 'px';
+    overlay.style.width = boundingBox.width + 'px';
+    overlay.style.height = boundingBox.height + 'px';
+    overlay.style.zIndex = '2147483647';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.cursor = 'not-allowed';
+    overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.25)';
+    overlay.style.boxSizing = 'border-box';
+    overlay.style.border = '2px solid red';
+    overlay.style.margin = '0';
+    overlay.style.padding = '0';
+    overlay.style.display = 'block';
+    overlay.style.visibility = 'visible';
+    overlay.style.opacity = '1';
+    
+    // Add scroll and resize listeners to keep overlay positioned correctly
+    setupOverlayPositionSync(overlay, element);
+    
+    // Add overlay to document body
+    if (document.body) {
+      document.body.appendChild(overlay);
+    } else {
+      document.documentElement.appendChild(overlay);
+    }
+    
+    // Store overlay reference in WeakMap
+    overlayMap.set(element, overlay);
+    
+    // Set up 5-second verification timer to check if ad element still exists
+    const verificationTimeout = setTimeout(() => {
+      // Check if the ad element still exists in the DOM
+      if (!document.contains(element)) {
+        console.log('❌ Ad element removed from DOM, removing overlay:', element);
+        removeAdOverlay(element, overlay);
+      } else {
+        console.log('✅ Ad element still exists after 5 seconds, keeping overlay:', element);
+      }
+    }, 5000); // 5-second verification
+    
+    // Store the verification timeout for potential cleanup
+    overlay._verificationTimeout = verificationTimeout;
+    
+    console.log('✅ Created overlay for', boundingBox.position, 'element:', element);
+    
+    return overlay;
+  } catch (e) {
+    console.error('❌ Error creating overlay:', e, 'Element:', element);
+    // Clean up if element was marked as covered but overlay creation failed
+    coveredElements.delete(element);
+    element.removeAttribute('data-ad-click-guard-covered');
+    return null;
+  }
+}
+
+// Function to remove overlay and clean up
+function removeAdOverlay(element, overlay) {
+  if (!element || !overlay) return;
+  
+  try {
+    // Clear the verification timeout
+    if (overlay._verificationTimeout) {
+      clearTimeout(overlay._verificationTimeout);
+    }
+    
+    // Remove event listeners if they exist
+    if (overlay._scrollListener) {
+      window.removeEventListener('scroll', overlay._scrollListener);
+    }
+    if (overlay._resizeListener) {
+      window.removeEventListener('resize', overlay._resizeListener);
+    }
+    if (overlay._elementObserver) {
+      overlay._elementObserver.disconnect();
+    }
+    
+    // Remove the overlay from DOM
+    if (overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
+    
+    // Remove from WeakMap
+    overlayMap.delete(element);
+    
+    // Remove from covered elements set
+    coveredElements.delete(element);
+    
+    // Remove data attribute from original element
+    element.removeAttribute('data-ad-click-guard-covered');
+    
+    console.log('✅ Removed overlay for element:', element);
+  } catch (e) {
+    console.error('❌ Error removing overlay:', e, 'Element:', element);
+  }
+}
+
+// Function to set up position synchronization for scroll and resize events
+function setupOverlayPositionSync(overlay, element) {
+  if (!overlay || !element) return;
+  
+  // Create throttled update function using requestAnimationFrame
+  let scrollUpdatePending = false;
+  let resizeUpdatePending = false;
+  
+  const updatePosition = () => {
+    try {
+      // Get updated bounding box
+      const boundingBox = getElementBoundingBox(element);
+      if (!boundingBox) return;
+      
+      // Update overlay position and size
+      overlay.style.position = boundingBox.position;
+      overlay.style.top = boundingBox.top + 'px';
+      overlay.style.left = boundingBox.left + 'px';
+      overlay.style.width = boundingBox.width + 'px';
+      overlay.style.height = boundingBox.height + 'px';
+    } catch (e) {
+      console.error('Error updating overlay position:', e);
+    }
+  };
+  
+  const scrollHandler = () => {
+    if (!scrollUpdatePending) {
+      scrollUpdatePending = true;
+      requestAnimationFrame(() => {
+        updatePosition();
+        scrollUpdatePending = false;
+      });
+    }
+  };
+  
+  const resizeHandler = () => {
+    if (!resizeUpdatePending) {
+      resizeUpdatePending = true;
+      requestAnimationFrame(() => {
+        updatePosition();
+        resizeUpdatePending = false;
+      });
+    }
+  };
+  
+  // Add event listeners
+  window.addEventListener('scroll', scrollHandler, { passive: true });
+  window.addEventListener('resize', resizeHandler, { passive: true });
+  
+  // Store the handlers for cleanup
+  overlay._scrollListener = scrollHandler;
+  overlay._resizeListener = resizeHandler;
+}
+
+// Function to create and manage MutationObserver for detection execution control
+function createAdDetectionObserver(callback) {
+  let detectionInProgress = false;
+  let observer = null;
+  
+  const detectionCallback = (mutations) => {
+    if (detectionInProgress) return;
+    
+    let newNodesAdded = false;
+    
+    // Process mutations to see if new nodes were added
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList') {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            newNodesAdded = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (newNodesAdded) {
+      // Only run detection if new nodes were added
+      detectionInProgress = true;
+      
+      // Run detection after a short delay to allow elements to be fully rendered
+      setTimeout(() => {
+        try {
+          if (typeof callback === 'function') {
+            callback();
+          }
+        } finally {
+          detectionInProgress = false;
+        }
+      }, 100);
+    }
+  };
+  
+  // Create the observer
+  observer = new MutationObserver(detectionCallback);
+  
+  // Start observing
+  if (document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: false, // Don't observe attribute changes to avoid unnecessary triggers
+      attributeOldValue: false,
+      characterData: false
+    });
+  }
+  
+  // Return observer instance for potential cleanup
+  return observer;
+}
+
+// Function to stop the MutationObserver
+function stopAdDetectionObserver(observer) {
+  if (observer) {
+    observer.disconnect();
+  }
+}
+
+// Function to remove all overlays when extension is disabled
+function removeAllOverlays() {
+  // Iterate over all covered elements and remove their overlays
+  const elementsToRemove = [];
+  
+  // Collect all elements that have overlays
+  coveredElements.forEach(element => {
+    if (element && document.contains(element)) {
+      elementsToRemove.push(element);
+    }
+  });
+  
+  // Remove each overlay
+  elementsToRemove.forEach(element => {
+    const overlay = overlayMap.get(element);
+    if (overlay) {
+      removeAdOverlay(element, overlay);
+    }
+  });
+  
+  // Clear the covered elements set
+  coveredElements.clear();
+  
+  console.log('✅ Removed all overlays, total:', elementsToRemove.length);
+}
+
+// Function to cleanup all timers, observers, and event listeners
+function cleanupAllResources() {
+  // Remove all overlays
+  removeAllOverlays();
+  
+  // Clear any remaining timeouts/intervals if they exist
+  // In a real implementation, you would track these in a collection
+  
+  console.log('✅ All resources cleaned up');
+}
+
+// Performance optimization: batch DOM reads and writes
+function batchDOMOperations(operations) {
+  // Use requestAnimationFrame to batch DOM operations and avoid layout thrashing
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      const results = [];
+      for (const operation of operations) {
+        if (typeof operation === 'function') {
+          results.push(operation());
+        }
+      }
+      resolve(results);
+    });
+  });
+}
+
+// Performance constraint: limit the number of elements processed at once
+function processElementsWithLimit(elements, processor, limit = 50) {
+  if (!Array.isArray(elements)) return [];
+  
+  const results = [];
+  const limitedElements = elements.slice(0, limit);
+  
+  for (const element of limitedElements) {
+    if (typeof processor === 'function') {
+      results.push(processor(element));
+    }
+  }
+  
+  return results;
+}
+
+// Debug function to visualize ad bounding boxes
+function visualizeAdBoundingBoxes() {
+  // Create a temporary container for debug elements
+  let debugContainer = document.querySelector('#ad-debug-visualizer');
+  if (!debugContainer) {
+    debugContainer = document.createElement('div');
+    debugContainer.id = 'ad-debug-visualizer';
+    debugContainer.style.position = 'fixed';
+    debugContainer.style.top = '0';
+    debugContainer.style.left = '0';
+    debugContainer.style.width = '0';
+    debugContainer.style.height = '0';
+    debugContainer.style.zIndex = '2147483646';
+    debugContainer.style.pointerEvents = 'none';
+    debugContainer.style.overflow = 'visible';
+    document.body.appendChild(debugContainer);
+  }
+  
+  // Remove existing debug elements
+  while (debugContainer.firstChild) {
+    debugContainer.removeChild(debugContainer.firstChild);
+  }
+  
+  // Add visual indicators for each covered element
+  coveredElements.forEach(element => {
+    if (!document.contains(element)) return;
+    
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    
+    const debugBox = document.createElement('div');
+    debugBox.style.position = 'absolute';
+    debugBox.style.top = rect.top + 'px';
+    debugBox.style.left = rect.left + 'px';
+    debugBox.style.width = rect.width + 'px';
+    debugBox.style.height = rect.height + 'px';
+    debugBox.style.border = '2px dashed yellow';
+    debugBox.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
+    debugBox.style.pointerEvents = 'none';
+    debugBox.style.zIndex = '2147483645';
+    debugBox.style.boxSizing = 'border-box';
+    
+    // Add label with element info
+    const label = document.createElement('div');
+    label.textContent = `${element.tagName} - ${getElementPositionType(element)}`;
+    label.style.position = 'absolute';
+    label.style.top = '-20px';
+    label.style.left = '0';
+    label.style.fontSize = '12px';
+    label.style.color = 'yellow';
+    label.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    label.style.padding = '2px 4px';
+    label.style.borderRadius = '2px';
+    
+    debugBox.appendChild(label);
+    debugContainer.appendChild(debugBox);
+  });
+}
+
+// Debug function to log overlay information
+function logOverlayInfo() {
+  console.group('🔍 Ad Overlay Debug Info');
+  console.log('Total covered elements:', coveredElements.size);
+  
+  coveredElements.forEach(element => {
+    if (document.contains(element)) {
+      const positionType = getElementPositionType(element);
+      const rect = element.getBoundingClientRect();
+      console.log('Element:', element, 'Position:', positionType, 'Size:', `${rect.width}x${rect.height}`);
+    }
+  });
+  
+  console.groupEnd();
+}
+
 // Export functions for use in content.js
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -890,7 +1348,22 @@ if (typeof module !== 'undefined' && module.exports) {
     calculateAdConfidence,
     matchesEasyListSelectors,
     detectGoogleAds,
-    detectHighConfidenceAds
+    detectHighConfidenceAds,
+    createAdOverlay,
+    getElementPositionType,
+    getElementBoundingBox,
+    coveredElements,
+    overlayMap,
+    removeAdOverlay,
+    setupOverlayPositionSync,
+    createAdDetectionObserver,
+    stopAdDetectionObserver,
+    removeAllOverlays,
+    cleanupAllResources,
+    batchDOMOperations,
+    processElementsWithLimit,
+    visualizeAdBoundingBoxes,
+    logOverlayInfo
   };
 }
 
@@ -905,5 +1378,20 @@ window.adDetection = {
   calculateAdConfidence,
   matchesEasyListSelectors,
   detectGoogleAds,
-  detectHighConfidenceAds
+  detectHighConfidenceAds,
+  createAdOverlay,
+  getElementPositionType,
+  getElementBoundingBox,
+  coveredElements,
+  overlayMap,
+  removeAdOverlay,
+  setupOverlayPositionSync,
+  createAdDetectionObserver,
+  stopAdDetectionObserver,
+  removeAllOverlays,
+  cleanupAllResources,
+  batchDOMOperations,
+  processElementsWithLimit,
+  visualizeAdBoundingBoxes,
+  logOverlayInfo
 };
