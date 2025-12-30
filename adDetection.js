@@ -3,11 +3,123 @@
 
 // New overlay system with position-aware logic, duplicate prevention, lifecycle cleanup, and performance control
 
-// WeakMap to store overlay references keyed by ad element
+// WeakMap to store overlay references keyed by anchor element
 const overlayMap = new WeakMap();
 
 // Set to track elements that are already covered to prevent duplicates
 const coveredElements = new Set();
+
+// Function to find the anchor element by walking up the DOM tree
+function findAdAnchorElement(adMarker) {
+  if (!adMarker || !adMarker.nodeType || adMarker.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+  
+  // Essential elements that should never be anchors
+  const essentialElements = ['body', 'html', 'head', 'header', 'footer', 'nav', 'main', 'article', 'section', 'aside'];
+  
+  // Check if the adMarker itself is a valid anchor
+  if (isValidAnchorElement(adMarker)) {
+    return adMarker;
+  }
+  
+  // Walk up the DOM tree to find a suitable anchor
+  let currentElement = adMarker.parentElement;
+  
+  while (currentElement && currentElement !== document.body && currentElement !== document.documentElement) {
+    const tagName = currentElement.tagName.toLowerCase();
+    
+    // Skip essential page elements
+    if (essentialElements.includes(tagName)) {
+      currentElement = currentElement.parentElement;
+      continue;
+    }
+    
+    // Check if this element is a valid anchor
+    if (isValidAnchorElement(currentElement)) {
+      // Verify that it has a stable bounding box
+      const rect = currentElement.getBoundingClientRect();
+      if (rect.width > 1 && rect.height > 1) { // Valid size
+        return currentElement;
+      }
+    }
+    
+    currentElement = currentElement.parentElement;
+  }
+  
+  // If no valid anchor found by walking up, return the original marker as fallback
+  return adMarker;
+}
+
+// Function to validate if an element is a suitable anchor
+function isValidAnchorElement(element) {
+  if (!element || !element.nodeType || element.nodeType !== Node.ELEMENT_NODE) {
+    return false;
+  }
+  
+  const tagName = element.tagName.toLowerCase();
+  const className = element.className ? element.className.toLowerCase() : '';
+  const id = element.id ? element.id.toLowerCase() : '';
+  
+  // Don't use essential page elements as anchors
+  const essentialElements = ['body', 'html', 'head', 'header', 'footer', 'nav', 'main', 'article', 'section', 'aside'];
+  if (essentialElements.includes(tagName)) {
+    return false;
+  }
+  
+  // Don't use common layout wrappers as anchors unless they clearly contain ads
+  if (tagName === 'div') {
+    const layoutIndicators = ['container', 'wrapper', 'layout', 'page', 'site', 'main', 'content', 'layout', 'site', 'page-wrapper', 'main-wrapper', 'content-wrapper'];
+    const isLayoutWrapper = layoutIndicators.some(indicator => 
+      className.includes(indicator) || id.includes(indicator)
+    );
+    
+    // However, if it has clear ad indicators, it can be an anchor
+    const adIndicators = ['ad', 'advertisement', 'banner', 'google', 'doubleclick', 'adsbygoogle', 'ad-container', 'ad-wrapper', 'google-ads', 'ad-placement', 'ad-unit', 'ad-box', 'ad-slot'];
+    const hasAdIndicators = adIndicators.some(indicator => 
+      className.includes(indicator) || id.includes(indicator)
+    );
+    
+    if (isLayoutWrapper && !hasAdIndicators) {
+      return false;
+    }
+  }
+  
+  // Element should have some content or children to be a valid anchor
+  const rect = element.getBoundingClientRect();
+  if (rect.width <= 1 || rect.height <= 1) {
+    return false; // Too small to be a meaningful anchor
+  }
+  
+  // Check if element is positioned in a way that suggests it's a container rather than a specific ad
+  const computedStyle = window.getComputedStyle(element);
+  const display = computedStyle.display;
+  
+  // If element is a flex/grid container that takes up most of the viewport, it's likely a layout container
+  if ((display === 'flex' || display === 'grid') &&
+      rect.width > window.innerWidth * 0.8 &&
+      rect.height > window.innerHeight * 0.3) {
+    return false;
+  }
+  
+  // Check if the element is likely a wrapper around other elements
+  // If it has many children or is significantly larger than its content, it might be a wrapper
+  const childElements = Array.from(element.children);
+  if (childElements.length > 10) {
+    // If it has many children but is not specifically marked as an ad, it might be a container
+    const adIndicators = ['ad', 'advertisement', 'banner', 'google', 'doubleclick', 'adsbygoogle'];
+    const hasAdIndicators = adIndicators.some(indicator => 
+      className.includes(indicator) || id.includes(indicator)
+    );
+    
+    if (!hasAdIndicators) {
+      return false;
+    }
+  }
+  
+  // If we reach here, it's a potentially valid anchor
+  return true;
+}
 
 // Function to get element position type
 function getElementPositionType(element) {
@@ -929,27 +1041,34 @@ function detectHighConfidenceAds(adElements, CONFIG, isAdElement, hasParentAdOve
   }
 }
 
-// Function to create overlay with position-aware logic
-function createAdOverlay(element) {
-  if (!element || element.nodeType !== Node.ELEMENT_NODE) return null;
+// Function to create overlay with position-aware logic using anchor element
+function createAdOverlay(adMarker) {
+  if (!adMarker || adMarker.nodeType !== Node.ELEMENT_NODE) return null;
   
-  // Check if element is already covered to prevent duplicates
-  if (coveredElements.has(element)) {
-    console.debug('Element already covered, skipping duplicate overlay:', element);
-    return overlayMap.get(element) || null;
-  }
-  
-  // Additional checks to avoid overlaying essential elements
-  const tagName = element.tagName.toLowerCase();
-  if (tagName === 'body' || tagName === 'html' || element === document.body || element === document.documentElement) {
-    console.debug('Skipping overlay for essential element:', element);
+  // Find the correct anchor element by walking up the DOM tree
+  const anchorElement = findAdAnchorElement(adMarker);
+  if (!anchorElement) {
+    console.debug('Could not find valid anchor element for ad marker:', adMarker);
     return null;
   }
   
-  // Get element bounding box with appropriate positioning
-  const boundingBox = getElementBoundingBox(element);
+  // Check if anchor element is already covered to prevent duplicates
+  if (coveredElements.has(anchorElement)) {
+    console.debug('Anchor element already covered, skipping duplicate overlay:', anchorElement);
+    return overlayMap.get(anchorElement) || null;
+  }
+  
+  // Additional checks to avoid overlaying essential elements
+  const tagName = anchorElement.tagName.toLowerCase();
+  if (tagName === 'body' || tagName === 'html' || anchorElement === document.body || anchorElement === document.documentElement) {
+    console.debug('Skipping overlay for essential element:', anchorElement);
+    return null;
+  }
+  
+  // Get anchor element bounding box with appropriate positioning
+  const boundingBox = getElementBoundingBox(anchorElement);
   if (!boundingBox) {
-    console.debug('Could not get bounding box for element:', element);
+    console.debug('Could not get bounding box for anchor element:', anchorElement);
     return null;
   }
   
@@ -959,7 +1078,7 @@ function createAdOverlay(element) {
   
   if (boundingBox.width > viewportWidth * 0.9 || boundingBox.height > viewportHeight * 0.6 ||
       (boundingBox.width < 2 || boundingBox.height < 2)) {
-    console.debug('Skipping overlay: element too large or too small:', element, 'Box:', boundingBox);
+    console.debug('Skipping overlay: anchor element too large or too small:', anchorElement, 'Box:', boundingBox);
     return null;
   }
   
@@ -969,12 +1088,13 @@ function createAdOverlay(element) {
     overlay.className = 'ad-click-guard-overlay';
     overlay.setAttribute('data-ad-element', 'true');
     
-    // Mark the element as covered
-    element.setAttribute('data-ad-click-guard-covered', 'true');
-    coveredElements.add(element);
+    // Mark the anchor element as covered
+    anchorElement.setAttribute('data-ad-click-guard-covered', 'true');
+    coveredElements.add(anchorElement);
     
-    // Store reference to the original element on the overlay
-    overlay._adElement = element;
+    // Store reference to the original ad marker and anchor element on the overlay
+    overlay._adElement = adMarker;
+    overlay._anchorElement = anchorElement;
     
     // Apply position-specific styling
     overlay.style.position = boundingBox.position;
@@ -995,7 +1115,7 @@ function createAdOverlay(element) {
     overlay.style.opacity = '1';
     
     // Add scroll and resize listeners to keep overlay positioned correctly
-    setupOverlayPositionSync(overlay, element);
+    setupOverlayPositionSync(overlay, anchorElement);
     
     // Add overlay to document body
     if (document.body) {
@@ -1004,38 +1124,38 @@ function createAdOverlay(element) {
       document.documentElement.appendChild(overlay);
     }
     
-    // Store overlay reference in WeakMap
-    overlayMap.set(element, overlay);
+    // Store overlay reference in WeakMap using anchor element as key
+    overlayMap.set(anchorElement, overlay);
     
-    // Set up 5-second verification timer to check if ad element still exists
+    // Set up 5-second verification timer to check if anchor element still exists
     const verificationTimeout = setTimeout(() => {
-      // Check if the ad element still exists in the DOM
-      if (!document.contains(element)) {
-        console.log('❌ Ad element removed from DOM, removing overlay:', element);
-        removeAdOverlay(element, overlay);
+      // Check if the anchor element still exists in the DOM
+      if (!document.contains(anchorElement)) {
+        console.log('❌ Anchor element removed from DOM, removing overlay:', anchorElement);
+        removeAdOverlay(anchorElement, overlay);
       } else {
-        console.log('✅ Ad element still exists after 5 seconds, keeping overlay:', element);
+        console.log('✅ Anchor element still exists after 5 seconds, keeping overlay:', anchorElement);
       }
     }, 5000); // 5-second verification
     
     // Store the verification timeout for potential cleanup
     overlay._verificationTimeout = verificationTimeout;
     
-    console.log('✅ Created overlay for', boundingBox.position, 'element:', element);
+    console.log('✅ Created overlay for', boundingBox.position, 'anchor element:', anchorElement, 'Original marker:', adMarker);
     
     return overlay;
   } catch (e) {
-    console.error('❌ Error creating overlay:', e, 'Element:', element);
-    // Clean up if element was marked as covered but overlay creation failed
-    coveredElements.delete(element);
-    element.removeAttribute('data-ad-click-guard-covered');
+    console.error('❌ Error creating overlay:', e, 'Anchor element:', anchorElement, 'Ad marker:', adMarker);
+    // Clean up if anchor element was marked as covered but overlay creation failed
+    coveredElements.delete(anchorElement);
+    anchorElement.removeAttribute('data-ad-click-guard-covered');
     return null;
   }
 }
 
 // Function to remove overlay and clean up
-function removeAdOverlay(element, overlay) {
-  if (!element || !overlay) return;
+function removeAdOverlay(anchorElement, overlay) {
+  if (!anchorElement || !overlay) return;
   
   try {
     // Clear the verification timeout
@@ -1060,17 +1180,17 @@ function removeAdOverlay(element, overlay) {
     }
     
     // Remove from WeakMap
-    overlayMap.delete(element);
+    overlayMap.delete(anchorElement);
     
     // Remove from covered elements set
-    coveredElements.delete(element);
+    coveredElements.delete(anchorElement);
     
-    // Remove data attribute from original element
-    element.removeAttribute('data-ad-click-guard-covered');
+    // Remove data attribute from anchor element
+    anchorElement.removeAttribute('data-ad-click-guard-covered');
     
-    console.log('✅ Removed overlay for element:', element);
+    console.log('✅ Removed overlay for anchor element:', anchorElement);
   } catch (e) {
-    console.error('❌ Error removing overlay:', e, 'Element:', element);
+    console.error('❌ Error removing overlay:', e, 'Anchor element:', anchorElement);
   }
 }
 
@@ -1190,6 +1310,21 @@ function stopAdDetectionObserver(observer) {
   if (observer) {
     observer.disconnect();
   }
+}
+
+// Function to handle sticky ad detection and overlay creation
+function handleStickyAdOverlay(adMarker) {
+  if (!adMarker || adMarker.nodeType !== Node.ELEMENT_NODE) return null;
+  
+  // Find the correct anchor element for the sticky ad
+  const anchorElement = findAdAnchorElement(adMarker);
+  if (!anchorElement) {
+    console.debug('Could not find anchor for sticky ad marker:', adMarker);
+    return null;
+  }
+  
+  // Create overlay using the anchor element
+  return createAdOverlay(adMarker);
 }
 
 // Function to remove all overlays when extension is disabled
