@@ -494,9 +494,27 @@ class CountdownWatcher {
     style.id = 'countdown-focus-styles';
     style.textContent = `
       .countdown-focus-effect {
+        position: relative;
         animation: countdown-pulse 1s infinite alternate, countdown-glow 1.5s infinite alternate;
         transform-origin: center;
         transition: all 0.3s ease;
+        z-index: 9999 !important;
+      }
+      
+      .countdown-focus-effect::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: calc(100% + 20px);
+        height: calc(100% + 20px);
+        transform: translate(-50%, -50%);
+        border: 3px solid #ff6b6b;
+        border-radius: 50%;
+        box-sizing: border-box;
+        pointer-events: none;
+        z-index: -1;
+        animation: countdown-circle-pulse 1s infinite alternate;
       }
       
       @keyframes countdown-pulse {
@@ -506,12 +524,25 @@ class CountdownWatcher {
       
       @keyframes countdown-glow {
         from { 
-          box-shadow: 0 0 5px rgba(255, 215, 0, 0.5), 0 0 10px rgba(255, 215, 0, 0.3); 
-          outline: 2px solid rgba(255, 215, 0, 0.5);
+          box-shadow: 0 0 10px rgba(255, 107, 107, 0.5), 0 0 20px rgba(255, 107, 107, 0.3); 
+          outline: 2px solid rgba(255, 107, 107, 0.5);
         }
         to { 
-          box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.6);
-          outline: 2px solid rgba(255, 215, 0, 0.8);
+          box-shadow: 0 0 30px rgba(255, 107, 107, 0.8), 0 0 40px rgba(255, 107, 107, 0.6);
+          outline: 2px solid rgba(255, 107, 107, 0.8);
+        }
+      }
+      
+      @keyframes countdown-circle-pulse {
+        0% {
+          width: calc(100% + 20px);
+          height: calc(100% + 20px);
+          opacity: 0.7;
+        }
+        100% {
+          width: calc(100% + 40px);
+          height: calc(100% + 40px);
+          opacity: 0.3;
         }
       }
     `;
