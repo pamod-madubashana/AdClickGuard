@@ -10,9 +10,10 @@ class CountdownWatcher {
       minimumDuration: 15,  // seconds
       maximumDuration: 60,  // seconds
       scrollBehavior: 'smooth',
-      focusEffectDuration: 3000, // milliseconds
+      focusEffectDuration: 10000, // milliseconds
       validationDelay: 1000, // milliseconds to wait between numeric checks
       debounceTime: 300,     // milliseconds to debounce rapid changes
+      enabled: true,         // Whether the countdown watcher is enabled
       ...options
     };
 
@@ -49,6 +50,16 @@ class CountdownWatcher {
    * Check if the extension is enabled
    */
   isExtensionEnabled() {
+    // Use the enabled option first
+    if (this.options.enabled === false) {
+      return false;
+    }
+    
+    // Check for global extension state
+    if (typeof window.extensionEnabled !== 'undefined') {
+      return window.extensionEnabled === true;
+    }
+    
     // Check if we're in a real extension context
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
       // In a real extension, we would communicate with background script
@@ -97,6 +108,11 @@ class CountdownWatcher {
    * Handle DOM mutations to detect potential countdowns
    */
   handleMutations(mutations) {
+    // Check if extension is enabled
+    if (!this.isExtensionEnabled()) {
+      return;
+    }
+    
     // Continue monitoring for dynamic countdowns even after one is detected
     // Only stop processing if we've already applied the focus effect
     if (this.hasScrolledToCountdown && this.detectedCountdownElement) {
@@ -240,6 +256,11 @@ class CountdownWatcher {
   processTextChanged(element, text) {
     if (!element || !text) return;
     
+    // Check if extension is enabled
+    if (!this.isExtensionEnabled()) {
+      return;
+    }
+    
     // Skip script and style elements
     if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
       return;
@@ -262,14 +283,26 @@ class CountdownWatcher {
    * Check if an element's numeric value has decreased
    */
   checkForNumericChange(element, currentText) {
+    // Check if extension is enabled
+    if (!this.isExtensionEnabled()) {
+      return;
+    }
+    
     const currentValue = this.extractNumericValue(currentText);
     
     console.log('CountdownWatcher: Processing text change for element:', element, 'text:', currentText, 'extracted value:', currentValue);
     
     if (currentValue === null) {
-      // If element no longer has a valid numeric value, remove from tracking
+      // If element no longer has a valid numeric value, this indicates the countdown has completed
       if (this.elementTracker.has(element)) {
-        console.log('CountdownWatcher: Removing element from tracking - no valid numeric value');
+        console.log('CountdownWatcher: Countdown completed (no numeric value), removing effect', element);
+        
+        // Remove the focus effect and overlay since countdown has completed
+        if (element && element.classList) {
+          element.classList.remove('countdown-focus-effect');
+        }
+        this.removeOverlayEffect(element);
+        
         this.elementTracker.delete(element);
       }
       return;
@@ -338,12 +371,19 @@ class CountdownWatcher {
    * Continue monitoring a confirmed countdown until it reaches zero
    */
   continueMonitoring(element, currentValue) {
-    // If the countdown has reached zero, stop monitoring
+    // If the countdown has reached zero, stop monitoring and remove the effect
     if (currentValue <= 0) {
       console.log('CountdownWatcher: Countdown reached zero, stopping monitoring', element);
       if (this.elementTracker.has(element)) {
         this.elementTracker.delete(element);
       }
+      
+      // Remove the focus effect and overlay
+      if (element && element.classList) {
+        element.classList.remove('countdown-focus-effect');
+      }
+      this.removeOverlayEffect(element);
+      
       return;
     }
     
@@ -353,6 +393,13 @@ class CountdownWatcher {
       if (this.elementTracker.has(element)) {
         this.elementTracker.delete(element);
       }
+      
+      // Remove the focus effect and overlay
+      if (element && element.classList) {
+        element.classList.remove('countdown-focus-effect');
+      }
+      this.removeOverlayEffect(element);
+      
       return;
     }
     
@@ -362,6 +409,22 @@ class CountdownWatcher {
         // Re-check the element's text content
         const currentText = this.getTextContent(element);
         console.log('CountdownWatcher: Re-checking element text:', currentText, 'for element:', element);
+        
+        // Check if the text has changed to a non-countdown format (like 'Redirecting now!')
+        const newValue = this.extractNumericValue(currentText);
+        if (newValue === null && currentValue > 0) {
+          // Countdown has likely completed but changed to non-numeric text
+          console.log('CountdownWatcher: Countdown completed (non-numeric text detected), removing effect', element);
+          if (element && element.classList) {
+            element.classList.remove('countdown-focus-effect');
+          }
+          this.removeOverlayEffect(element);
+          
+          // Remove from tracking
+          this.elementTracker.delete(element);
+          return;
+        }
+        
         this.checkForNumericChange(element, currentText);
       }
     }, this.options.validationDelay);
@@ -486,19 +549,6 @@ class CountdownWatcher {
     
     // Create an overlay element for enhanced visibility
     this.createOverlayEffect(element);
-
-    // Set timeout to remove the effect after the specified duration
-    if (this.focusEffectTimeout) {
-      clearTimeout(this.focusEffectTimeout);
-    }
-
-    this.focusEffectTimeout = setTimeout(() => {
-      if (element && element.classList) {
-        element.classList.remove('countdown-focus-effect');
-      }
-      // Remove the overlay
-      this.removeOverlayEffect(element);
-    }, this.options.focusEffectDuration);
 
     console.log('CountdownWatcher: Applied focus effect to countdown element', element);
   }
@@ -707,10 +757,64 @@ class CountdownWatcher {
     }
     this.debounceTimers.clear();
     
+    // Clear all active monitoring intervals and remove effects
+    for (const [element] of this.elementTracker) {
+      if (element.countdownMonitorInterval) {
+        clearInterval(element.countdownMonitorInterval);
+        element.countdownMonitorInterval = null;
+      }
+      // Remove focus effects from tracked elements
+      if (element && element.classList) {
+        element.classList.remove('countdown-focus-effect');
+      }
+      this.removeOverlayEffect(element);
+    }
+    
     // Clear element tracker
     this.elementTracker.clear();
   }
-
+  
+  /**
+   * Update the enabled state of the countdown watcher
+   */
+  setEnabled(enabled) {
+    this.options.enabled = enabled;
+    
+    if (!enabled) {
+      // If disabling, disconnect the observer and clear all tracking
+      if (this.countdownObserver) {
+        this.countdownObserver.disconnect();
+        console.log('CountdownWatcher: Disabled, disconnected observer');
+      }
+      
+      // Remove all focus effects before clearing tracker
+      for (const [element] of this.elementTracker) {
+        if (element && element.classList) {
+          element.classList.remove('countdown-focus-effect');
+        }
+        this.removeOverlayEffect(element);
+      }
+      
+      // Clear all tracking
+      this.elementTracker.clear();
+      
+      // Clear all debounce timers
+      for (const timer of this.debounceTimers.values()) {
+        clearTimeout(timer);
+      }
+      this.debounceTimers.clear();
+      
+      // Reset state
+      this.hasScrolledToCountdown = false;
+      this.detectedCountdownElement = null;
+    } else {
+      // If enabling, start observing again
+      if (this.isExtensionEnabled()) {
+        this.startObserving();
+      }
+    }
+  }
+  
   /**
    * Reset the watcher state (for re-initialization)
    */
