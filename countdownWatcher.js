@@ -858,8 +858,10 @@ class CountdownWatcher {
     // Add temporary CSS if not already present
     this.addFocusEffectStyles();
     
-    // Create an overlay element for enhanced visibility
-    this.createOverlayEffect(element);
+    // Create an overlay element for enhanced visibility only if one doesn't already exist
+    if (!element.countdownOverlay) {
+      this.createOverlayEffect(element);
+    }
 
     // Determine the duration for the effect
     // According to requirements: effect duration must be exactly equal to remaining countdown seconds
@@ -884,6 +886,12 @@ class CountdownWatcher {
     // Remove any existing overlay for this element
     this.removeOverlayEffect(element);
     
+    // Don't create overlay for essential page elements
+    if (element === document.body || element === document.documentElement ||
+        element.tagName === 'BODY' || element.tagName === 'HTML') {
+      return;
+    }
+    
     const overlay = document.createElement('div');
     overlay.className = 'countdown-focus-overlay';
     
@@ -892,6 +900,16 @@ class CountdownWatcher {
       if (!document.contains(overlay) || !document.contains(element)) return;
       
       const rect = element.getBoundingClientRect();
+      
+      // Skip if the element is too large (like a full viewport element)
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      if (rect.width > viewportWidth * 0.9 && rect.height > viewportHeight * 0.9) {
+        // Don't apply overlay to elements that cover most of the viewport
+        overlay.style.display = 'none';
+        return;
+      }
+      
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
       
@@ -899,6 +917,7 @@ class CountdownWatcher {
       overlay.style.left = (rect.left + scrollLeft - 10) + 'px';
       overlay.style.width = (rect.width + 20) + 'px';
       overlay.style.height = (rect.height + 20) + 'px';
+      overlay.style.display = 'block'; // Make sure it's visible
     };
     
     // Position the overlay around the element
