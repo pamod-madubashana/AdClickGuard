@@ -24,6 +24,9 @@ class CountdownWatcher {
     this.focusEffectTimeout = null;
     this.extensionElements = new WeakSet(); // Track elements added by the extension
     
+    // Track which element currently has the focus effect to prevent duplicates
+    this.currentFocusElement = null;
+    
     // Additional state for trigger-based detection
     this.isDetecting = false;
     this.detectionTimeout = null;
@@ -276,6 +279,7 @@ class CountdownWatcher {
     // Reset state
     this.hasScrolledToCountdown = false;
     this.detectedCountdownElement = null;
+    this.currentFocusElement = null;
   }
   
   /**
@@ -310,15 +314,34 @@ class CountdownWatcher {
             // If this is the first countdown element found, apply focus effect immediately
             if (!this.hasScrolledToCountdown && !this.detectedCountdownElement) {
               console.log('CountdownWatcher: First countdown detected, applying immediate focus effect for', numericValue, 'seconds');
-              
+                            
+              // Prefer parent container elements over child elements that only contain numbers
+              // If the current element is a child of another element that also contains countdown text,
+              // prioritize the parent
+              let targetElement = element;
+                            
+              // Look for a parent element that also contains the same countdown value
+              let parent = element.parentElement;
+              while (parent) {
+                const parentText = this.getTextContent(parent);
+                const parentNumericValue = this.extractNumericValue(parentText);
+                              
+                if (parentNumericValue !== null && parentNumericValue === numericValue) {
+                  // Found a parent with the same countdown value, prefer the parent
+                  targetElement = parent;
+                  break;
+                }
+                parent = parent.parentElement;
+              }
+                            
               // Apply the focus effect immediately with the current value as duration
-              this.detectedCountdownElement = element;
-              this.scrollToCountdown(element);
-              this.applyFocusEffect(element, numericValue);
-              
+              this.detectedCountdownElement = targetElement;
+              this.scrollToCountdown(targetElement);
+              this.applyFocusEffect(targetElement, numericValue);
+                            
               // Continue monitoring this specific element
-              this.continueMonitoring(element, numericValue);
-              
+              this.continueMonitoring(targetElement, numericValue);
+                            
               // Stop the general detection since we found a countdown
               this.stopCountdownDetection();
             }
@@ -628,11 +651,30 @@ class CountdownWatcher {
                     
             // If we haven't applied the focus effect yet, do it now
             if (!this.hasScrolledToCountdown && !this.detectedCountdownElement) {
-              this.detectedCountdownElement = element;
-              this.scrollToCountdown(element);
-              this.applyFocusEffect(element, currentValue);
-              this.continueMonitoring(element, currentValue);
-                      
+              // Prefer parent container elements over child elements that only contain numbers
+              // If the current element is a child of another element that also contains countdown text,
+              // prioritize the parent
+              let targetElement = element;
+                          
+              // Look for a parent element that also contains the same countdown value
+              let parent = element.parentElement;
+              while (parent) {
+                const parentText = this.getTextContent(parent);
+                const parentNumericValue = this.extractNumericValue(parentText);
+                            
+                if (parentNumericValue !== null && parentNumericValue === currentValue) {
+                  // Found a parent with the same countdown value, prefer the parent
+                  targetElement = parent;
+                  break;
+                }
+                parent = parent.parentElement;
+              }
+                          
+              this.detectedCountdownElement = targetElement;
+              this.scrollToCountdown(targetElement);
+              this.applyFocusEffect(targetElement, currentValue);
+              this.continueMonitoring(targetElement, currentValue);
+                          
               // Stop the general detection since we confirmed a countdown
               this.stopCountdownDetection();
             }
@@ -693,6 +735,11 @@ class CountdownWatcher {
       if (document.contains(element)) {
         console.log('CountdownWatcher: Countdown duration completed, removing effect', element);
         this.removeOverlayEffect(element);
+        
+        // Clear the current focus element if it matches the one being removed
+        if (this.currentFocusElement === element) {
+          this.currentFocusElement = null;
+        }
       }
     }, countdownDuration * 1000); // Convert seconds to milliseconds
   }
@@ -854,6 +901,15 @@ class CountdownWatcher {
    */
   applyFocusEffect(element, countdownDuration = null) {
     if (!element) return;
+
+    // Prevent duplicate focus effects - only one element should have the focus effect at a time
+    if (this.currentFocusElement && this.currentFocusElement !== element) {
+      // Remove the focus effect from the previous element if it's different
+      this.removeFocusEffect(this.currentFocusElement);
+    }
+    
+    // Update the current focus element
+    this.currentFocusElement = element;
 
     // Add temporary CSS if not already present
     this.addFocusEffectStyles();
@@ -1064,6 +1120,11 @@ class CountdownWatcher {
     
     // Remove overlay effect
     this.removeOverlayEffect(element);
+    
+    // Clear the current focus element if it matches the one being removed
+    if (this.currentFocusElement === element) {
+      this.currentFocusElement = null;
+    }
     
     console.log('CountdownWatcher: Removed focus effect from countdown element', element);
   }
