@@ -306,6 +306,22 @@ class CountdownWatcher {
             });
             
             console.log('CountdownWatcher: Started tracking initial element with value', numericValue);
+            
+            // If this is the first countdown element found, apply focus effect immediately
+            if (!this.hasScrolledToCountdown && !this.detectedCountdownElement) {
+              console.log('CountdownWatcher: First countdown detected, applying immediate focus effect for', numericValue, 'seconds');
+              
+              // Apply the focus effect immediately with the current value as duration
+              this.detectedCountdownElement = element;
+              this.scrollToCountdown(element);
+              this.applyFocusEffect(element, numericValue);
+              
+              // Continue monitoring this specific element
+              this.continueMonitoring(element, numericValue);
+              
+              // Stop the general detection since we found a countdown
+              this.stopCountdownDetection();
+            }
           }
         }
       }
@@ -509,6 +525,34 @@ class CountdownWatcher {
       return;
     }
     
+    // Check if this text contains a countdown number and we haven't applied focus yet
+    const numericValue = this.extractNumericValue(text);
+    if (numericValue !== null && numericValue >= 1 && numericValue <= 120 && 
+        !this.hasScrolledToCountdown && !this.detectedCountdownElement && 
+        !this.elementTracker.has(element)) {
+      console.log('CountdownWatcher: Detected countdown in text change:', text, 'value:', numericValue);
+      
+      // Apply focus effect immediately if this looks like a countdown
+      this.detectedCountdownElement = element;
+      this.scrollToCountdown(element);
+      this.applyFocusEffect(element, numericValue);
+      
+      // Continue monitoring this specific element
+      this.continueMonitoring(element, numericValue);
+      
+      // Stop the general detection since we found a countdown
+      this.stopCountdownDetection();
+      
+      // Add to tracking so we can monitor for changes
+      this.elementTracker.set(element, {
+        lastValue: numericValue,
+        lastCheckTime: Date.now(),
+        consecutiveDecreases: 0
+      });
+      
+      return; // Exit early since we've handled this as a confirmed countdown
+    }
+    
     // Debounce rapid changes for the same element
     if (this.debounceTimers.has(element)) {
       clearTimeout(this.debounceTimers.get(element));
@@ -577,14 +621,21 @@ class CountdownWatcher {
         console.log('CountdownWatcher: Numeric value decreased to', currentValue, 'element:', element, 'consecutive decreases:', tracker.consecutiveDecreases);
           
         // If we've seen at least 2 consecutive decreases, confirm as valid dynamic countdown
-        if (tracker.consecutiveDecreases >= 2 && !this.hasScrolledToCountdown) {
+        if (tracker.consecutiveDecreases >= 2) {
           // Apply duration filtering only after confirming valid countdown behavior
           if (currentValue >= this.options.minimumDuration && currentValue <= this.options.maximumDuration) {
             console.log('CountdownWatcher: Valid dynamic countdown confirmed after', tracker.consecutiveDecreases, 'decreases', element, currentText);
-            this.handleConfirmedCountdown(element);
-              
-            // Continue monitoring until countdown reaches zero
-            this.continueMonitoring(element, currentValue);
+                    
+            // If we haven't applied the focus effect yet, do it now
+            if (!this.hasScrolledToCountdown && !this.detectedCountdownElement) {
+              this.detectedCountdownElement = element;
+              this.scrollToCountdown(element);
+              this.applyFocusEffect(element, currentValue);
+              this.continueMonitoring(element, currentValue);
+                      
+              // Stop the general detection since we confirmed a countdown
+              this.stopCountdownDetection();
+            }
           } else {
             console.log('CountdownWatcher: Countdown confirmed but outside duration range [', this.options.minimumDuration, ',', this.options.maximumDuration, '], ignoring:', currentValue);
             // Remove from tracking since it's not in our desired range
