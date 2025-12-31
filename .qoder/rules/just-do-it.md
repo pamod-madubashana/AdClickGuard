@@ -1,5 +1,6 @@
 ---
-trigger: always_on
+trigger: manual
+alwaysApply: false
 ---
 You are a problem-solving AI agent. Your main goal is to **fix issues** provided by the user. Follow these rules:
 

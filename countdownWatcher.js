@@ -7,8 +7,8 @@ class CountdownWatcher {
   constructor(options = {}) {
     // Configuration
     this.options = {
-      minimumDuration: 15,  // seconds
-      maximumDuration: 60,  // seconds
+      minimumDuration: 1,  // seconds - allow any reasonable countdown
+      maximumDuration: 120,  // seconds - allow any reasonable countdown
       scrollBehavior: 'smooth',
       focusEffectDuration: 10000, // milliseconds
       validationDelay: 1000, // milliseconds to wait between numeric checks
@@ -23,6 +23,11 @@ class CountdownWatcher {
     this.countdownObserver = null;
     this.focusEffectTimeout = null;
     this.extensionElements = new WeakSet(); // Track elements added by the extension
+    
+    // Additional state for trigger-based detection
+    this.isDetecting = false;
+    this.detectionTimeout = null;
+    this.buttonObserver = null;
     
     // Track elements with numeric values over time
     this.elementTracker = new Map(); // Store element -> { lastValue, lastCheckTime, consecutiveDecreases }
@@ -41,9 +46,8 @@ class CountdownWatcher {
       return;
     }
     
-    // Start observing for dynamic content changes immediately
-    this.startObserving();
-    // NO INITIAL SCANNING - only detect elements that change dynamically
+    // Set up event listeners for 'Continue' button clicks
+    this.setupButtonListeners();
   }
 
   /**
@@ -55,17 +59,19 @@ class CountdownWatcher {
       return false;
     }
     
-    // Check for global extension state
+    // Check for global extension state from content script
     if (typeof window.extensionEnabled !== 'undefined') {
       return window.extensionEnabled === true;
     }
     
     // Check if we're in a real extension context
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
-      // In a real extension, we would communicate with background script
-      // to get the actual enabled state
-      // For this standalone module, we'll default to enabled
-      // but in a real extension context, this would check the actual state
+      // In a real extension context, we should get the state from content script
+      // This will be set by the content script when it receives the state from background
+      if (typeof window.safeUrlExtensionEnabled !== 'undefined') {
+        return window.safeUrlExtensionEnabled === true;
+      }
+      // Default to enabled if no state is set
       return true;
     }
     
@@ -78,11 +84,241 @@ class CountdownWatcher {
     // Default to enabled for standalone usage
     return true;
   }
+  
+  /**
+   * Set up event listeners for 'Continue' or equivalent buttons
+   */
+  setupButtonListeners() {
+    // Look for buttons that might trigger countdowns
+    const buttonSelectors = [
+      'button',
+      '[role="button"]',
+      '.continue-btn',
+      '[class*="continue" i]',
+      '[class*="Continue" i]',
+      '[id*="continue" i]',
+      '[id*="Continue" i]',
+      '[class*="next" i]',
+      '[id*="next" i]',
+      '[class*="Next" i]',
+      '[id*="Next" i]',
+      '[class*="start" i]',
+      '[id*="start" i]',
+      '[class*="Start" i]',
+      '[id*="Start" i]'
+    ];
+    
+    // Add event listeners to existing buttons
+    buttonSelectors.forEach(selector => {
+      const buttons = document.querySelectorAll(selector);
+      buttons.forEach(button => {
+        this.addButtonListener(button);
+      });
+    });
+    
+    // Set up a MutationObserver to catch dynamically added buttons
+    this.buttonObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Check the added node itself
+              if (this.isButtonElement(node)) {
+                this.addButtonListener(node);
+              }
+              // Check child nodes
+              const walker = document.createTreeWalker(
+                node,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                  acceptNode: (node) => {
+                    if (this.isButtonElement(node)) {
+                      return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                  }
+                }
+              );
+              
+              let currentNode;
+              while (currentNode = walker.nextNode()) {
+                this.addButtonListener(currentNode);
+              }
+            }
+          });
+        }
+      });
+    });
+    
+    this.buttonObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  
+  /**
+   * Check if an element is a button element
+   */
+  isButtonElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+    
+    const tagName = element.tagName.toLowerCase();
+    const className = element.className.toLowerCase();
+    const id = (element.id || '').toLowerCase();
+    const textContent = (element.textContent || '').toLowerCase();
+    
+    // Check tag name
+    if (tagName === 'button' || tagName === 'input' && element.type === 'button') {
+      return true;
+    }
+    
+    // Check for button roles
+    if (element.getAttribute('role') === 'button') {
+      return true;
+    }
+    
+    // Check for continue-like text content
+    const continueKeywords = ['continue', 'next', 'start', 'proceed', 'go', 'skip'];
+    if (continueKeywords.some(keyword => textContent.includes(keyword))) {
+      return true;
+    }
+    
+    // Check for continue-like class names or IDs
+    const continuePatterns = ['continue', 'next', 'start', 'proceed'];
+    return continuePatterns.some(pattern => 
+      className.includes(pattern.toLowerCase()) || 
+      id.includes(pattern.toLowerCase())
+    );
+  }
+  
+  /**
+   * Add click listener to a button
+   */
+  addButtonListener(button) {
+    // Skip if already has listener
+    if (button.countdownWatcherListenerAdded) return;
+    
+    const clickHandler = () => {
+      this.startCountdownDetection();
+    };
+    
+    button.addEventListener('click', clickHandler);
+    button.countdownWatcherListenerAdded = true;
+    
+    // Store the handler for potential cleanup
+    button.countdownWatcherClickHandler = clickHandler;
+  }
+  
+  /**
+   * Start countdown detection after button click
+   */
+  startCountdownDetection() {
+    console.log('CountdownWatcher: Starting countdown detection after button click');
+    
+    // If already detecting, don't start again
+    if (this.isDetecting) {
+      console.log('CountdownWatcher: Already detecting, skipping duplicate start');
+      return;
+    }
+    
+    this.isDetecting = true;
+    
+    // Start observing for dynamic content changes
+    this.startObserving();
+    
+    // Scan the current DOM for potential countdown elements
+    this.scanForInitialCountdowns();
+    
+    // Set up timeout to stop detection after 5 seconds if no countdown is found
+    this.detectionTimeout = setTimeout(() => {
+      console.log('CountdownWatcher: 5 second timeout reached, stopping detection');
+      this.stopCountdownDetection();
+    }, 5000); // 5 seconds
+  }
+  
+  /**
+   * Stop countdown detection
+   */
+  stopCountdownDetection() {
+    console.log('CountdownWatcher: Stopping countdown detection');
+    
+    this.isDetecting = false;
+    
+    // Clear the timeout if it exists
+    if (this.detectionTimeout) {
+      clearTimeout(this.detectionTimeout);
+      this.detectionTimeout = null;
+    }
+    
+    // Disconnect the observer
+    if (this.countdownObserver) {
+      this.countdownObserver.disconnect();
+      this.countdownObserver = null;
+    }
+    
+    // Clear all active monitoring intervals
+    for (const [element] of this.elementTracker) {
+      if (element.countdownMonitorInterval) {
+        clearInterval(element.countdownMonitorInterval);
+        element.countdownMonitorInterval = null;
+      }
+    }
+    
+    // Clear all debounce timers
+    for (const timer of this.debounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.debounceTimers.clear();
+    
+    // Reset element tracking
+    this.elementTracker.clear();
+    
+    // Reset state
+    this.hasScrolledToCountdown = false;
+    this.detectedCountdownElement = null;
+  }
+  
+  /**
+   * Scan the current DOM for potential countdown elements
+   */
+  scanForInitialCountdowns() {
+    console.log('CountdownWatcher: Scanning for initial countdown elements');
+    
+    // Look for elements that might contain countdown text
+    const potentialElements = document.querySelectorAll('div, span, p, h1, h2, h3, h4, h5, h6, li, td, th, a, button, input');
+    
+    potentialElements.forEach(element => {
+      if (this.extensionElements.has(element)) return; // Skip extension-added elements
+      
+      const textContent = this.getTextContent(element);
+      if (textContent.trim()) {
+        const numericValue = this.extractNumericValue(textContent);
+        
+        if (numericValue !== null && numericValue >= 1 && numericValue <= 120) {
+          console.log('CountdownWatcher: Found potential countdown element:', element, 'with text:', textContent, 'and value:', numericValue);
+          
+          // Add to tracking so we can monitor for changes
+          if (!this.elementTracker.has(element)) {
+            this.elementTracker.set(element, {
+              lastValue: numericValue,
+              lastCheckTime: Date.now(),
+              consecutiveDecreases: 0
+            });
+            
+            console.log('CountdownWatcher: Started tracking initial element with value', numericValue);
+          }
+        }
+      }
+    });
+  }
 
   /**
    * Start observing the DOM for changes that might contain countdowns
    */
   startObserving() {
+    // Reset state to handle SPA navigation
+    this.resetState();
+    
     if (this.countdownObserver) {
       this.countdownObserver.disconnect();
     }
@@ -95,8 +331,8 @@ class CountdownWatcher {
       childList: true,
       subtree: true,
       characterData: true,
-      attributes: true,  // Watch for attribute changes (like style changes)
-      attributeFilter: ['style', 'class']  // Only watch style and class attributes
+      attributes: true,  // Watch for attribute changes
+      attributeFilter: ['style', 'class', 'aria-label', 'data-countdown', 'data-timer', 'title', 'value']  // Watch attributes that might contain countdown info
     });
 
     console.log('CountdownWatcher: MutationObserver started with pure dynamic detection');
@@ -113,9 +349,8 @@ class CountdownWatcher {
       return;
     }
     
-    // Continue monitoring for dynamic countdowns even after one is detected
-    // Only stop processing if we've already applied the focus effect
-    if (this.hasScrolledToCountdown && this.detectedCountdownElement) {
+    // Stop processing mutations if the observer has been disconnected after countdown confirmation
+    if (!this.countdownObserver) {
       return;
     }
 
@@ -143,28 +378,36 @@ class CountdownWatcher {
           this.processTextChanged(element, newText);
         }
       }
-      // Check attribute changes (like style changes that make elements visible)
+      // Check attribute changes (like aria-label, data attributes, etc. that might contain countdown info)
       else if (mutation.type === 'attributes') {
         const element = mutation.target;
         if (element && element.nodeType === Node.ELEMENT_NODE && 
             !this.extensionElements.has(element)) {
-          // Element attributes changed, check if it's now visible and has text content
-          // This handles cases where display changes from 'none' to 'block'
-          if (this.isElementVisible(element)) {
-            const textContent = this.getTextContent(element);
-            if (textContent.trim()) {
-              this.processTextChanged(element, textContent);
+          // Check for changes in specific attributes that might contain countdown text
+          const attributeName = mutation.attributeName;
+          if (['aria-label', 'title', 'data-countdown', 'data-timer', 'value'].includes(attributeName)) {
+            const attributeValue = element.getAttribute(attributeName);
+            if (attributeValue && attributeValue.trim()) {
+              this.processTextChanged(element, attributeValue);
             }
-          }
-          // Also check if element was previously invisible but now might have content
-          // This handles cases where content was added while element was hidden
-          else {
-            // Check if the element has text content even when not visible
-            // If it becomes visible later, it will be processed
-            const textContent = this.getTextContent(element);
-            if (textContent.trim()) {
-              // Store this content to process when element becomes visible
-              // We'll process it again when visibility changes
+          } else {
+            // For style/class changes, check if element visibility changed
+            if (this.isElementVisible(element)) {
+              const textContent = this.getTextContent(element);
+              if (textContent.trim()) {
+                this.processTextChanged(element, textContent);
+              }
+            }
+            // Also check if element was previously invisible but now might have content
+            // This handles cases where content was added while element was hidden
+            else {
+              // Check if the element has text content even when not visible
+              // If it becomes visible later, it will be processed
+              const textContent = this.getTextContent(element);
+              if (textContent.trim()) {
+                // Store this content to process when element becomes visible
+                // We'll process it again when visibility changes
+              }
             }
           }
         }
@@ -287,58 +530,66 @@ class CountdownWatcher {
     if (!this.isExtensionEnabled()) {
       return;
     }
-    
+      
     const currentValue = this.extractNumericValue(currentText);
-    
+      
     console.log('CountdownWatcher: Processing text change for element:', element, 'text:', currentText, 'extracted value:', currentValue);
-    
+      
     if (currentValue === null) {
       // If element no longer has a valid numeric value, this indicates the countdown has completed
       if (this.elementTracker.has(element)) {
         console.log('CountdownWatcher: Countdown completed (no numeric value), removing effect', element);
-        
+          
         // Remove the focus effect and overlay since countdown has completed
         if (element && element.classList) {
           element.classList.remove('countdown-focus-effect');
         }
         this.removeOverlayEffect(element);
-        
+          
         this.elementTracker.delete(element);
       }
       return;
     }
-    
-    // Validate that the current value is within our expected range before considering it a countdown
-    if (currentValue < this.options.minimumDuration || currentValue > this.options.maximumDuration) {
-      // If value is outside our range, remove from tracking
-      if (this.elementTracker.has(element)) {
-        console.log('CountdownWatcher: Removing element from tracking - value', currentValue, 'outside range [', this.options.minimumDuration, ',', this.options.maximumDuration, ']');
-        this.elementTracker.delete(element);
-      }
+      
+    // We no longer filter by duration range during initial detection
+    // Instead, we track all numeric values and validate behavior after observing changes
+    // This ensures we don't miss countdowns that start with values outside our expected range
+    // but still exhibit valid countdown behavior
+      
+    // Check if the value is within reasonable countdown range (1-120 seconds)
+    if (currentValue < 1 || currentValue > 120) {
+      console.log('CountdownWatcher: Value', currentValue, 'outside reasonable countdown range [1, 120], ignoring element:', element);
       return;
     }
-    
+      
     // Check if we're already tracking this element
     if (this.elementTracker.has(element)) {
       const tracker = this.elementTracker.get(element);
-      
+        
       console.log('CountdownWatcher: Element was tracked with value', tracker.lastValue, 'now', currentValue);
-      
+        
       // If the value has decreased, increment the consecutive decrease counter
       if (currentValue < tracker.lastValue) {
         tracker.lastValue = currentValue;
         tracker.lastCheckTime = Date.now();
         tracker.consecutiveDecreases = (tracker.consecutiveDecreases || 0) + 1;
-        
+          
         console.log('CountdownWatcher: Numeric value decreased to', currentValue, 'element:', element, 'consecutive decreases:', tracker.consecutiveDecreases);
-        
+          
         // If we've seen at least 2 consecutive decreases, confirm as valid dynamic countdown
         if (tracker.consecutiveDecreases >= 2 && !this.hasScrolledToCountdown) {
-          console.log('CountdownWatcher: Valid dynamic countdown confirmed after', tracker.consecutiveDecreases, 'decreases', element, currentText);
-          this.handleConfirmedCountdown(element);
-          
-          // Continue monitoring until countdown reaches zero
-          this.continueMonitoring(element, currentValue);
+          // Apply duration filtering only after confirming valid countdown behavior
+          if (currentValue >= this.options.minimumDuration && currentValue <= this.options.maximumDuration) {
+            console.log('CountdownWatcher: Valid dynamic countdown confirmed after', tracker.consecutiveDecreases, 'decreases', element, currentText);
+            this.handleConfirmedCountdown(element);
+              
+            // Continue monitoring until countdown reaches zero
+            this.continueMonitoring(element, currentValue);
+          } else {
+            console.log('CountdownWatcher: Countdown confirmed but outside duration range [', this.options.minimumDuration, ',', this.options.maximumDuration, '], ignoring:', currentValue);
+            // Remove from tracking since it's not in our desired range
+            this.elementTracker.delete(element);
+          }
         }
       } else if (currentValue > tracker.lastValue) {
         // Value increased, reset the counter
@@ -359,42 +610,24 @@ class CountdownWatcher {
         lastCheckTime: Date.now(),
         consecutiveDecreases: 0
       });
-      
+        
       console.log('CountdownWatcher: Started tracking element with numeric value', currentValue, element);
     }
       
-    // Start active monitoring for this element to catch changes
-    this.startActiveMonitoring(element);
+    // Only start active monitoring if we haven't confirmed a countdown yet
+    if (!this.hasScrolledToCountdown && this.countdownObserver) {
+      // Start active monitoring for this element to catch changes
+      this.startActiveMonitoring(element);
+    }
   }
     
   /**
    * Continue monitoring a confirmed countdown until it reaches zero
    */
-  continueMonitoring(element, currentValue) {
-    // If the countdown has reached zero, stop monitoring and remove the effect
-    if (currentValue <= 0) {
-      console.log('CountdownWatcher: Countdown reached zero, stopping monitoring', element);
-      if (this.elementTracker.has(element)) {
-        this.elementTracker.delete(element);
-      }
-      
-      // Remove the focus effect and overlay
-      if (element && element.classList) {
-        element.classList.remove('countdown-focus-effect');
-      }
-      this.removeOverlayEffect(element);
-      
-      return;
-    }
-    
+  continueMonitoring(element, countdownDuration) {
     // Check if the element still exists in the DOM
     if (!document.contains(element)) {
       console.log('CountdownWatcher: Element removed from DOM, stopping monitoring', element);
-      if (this.elementTracker.has(element)) {
-        this.elementTracker.delete(element);
-      }
-      
-      // Remove the focus effect and overlay
       if (element && element.classList) {
         element.classList.remove('countdown-focus-effect');
       }
@@ -403,31 +636,17 @@ class CountdownWatcher {
       return;
     }
     
-    // Continue monitoring with a timeout
+    // Set up a timeout to stop monitoring when the countdown duration completes
     setTimeout(() => {
-      if (this.elementTracker.has(element)) {
-        // Re-check the element's text content
-        const currentText = this.getTextContent(element);
-        console.log('CountdownWatcher: Re-checking element text:', currentText, 'for element:', element);
-        
-        // Check if the text has changed to a non-countdown format (like 'Redirecting now!')
-        const newValue = this.extractNumericValue(currentText);
-        if (newValue === null && currentValue > 0) {
-          // Countdown has likely completed but changed to non-numeric text
-          console.log('CountdownWatcher: Countdown completed (non-numeric text detected), removing effect', element);
-          if (element && element.classList) {
-            element.classList.remove('countdown-focus-effect');
-          }
-          this.removeOverlayEffect(element);
-          
-          // Remove from tracking
-          this.elementTracker.delete(element);
-          return;
+      // Check if element still exists before removing effects
+      if (document.contains(element)) {
+        console.log('CountdownWatcher: Countdown duration completed, removing effect', element);
+        if (element && element.classList) {
+          element.classList.remove('countdown-focus-effect');
         }
-        
-        this.checkForNumericChange(element, currentText);
+        this.removeOverlayEffect(element);
       }
-    }, this.options.validationDelay);
+    }, countdownDuration * 1000); // Convert seconds to milliseconds
   }
   
   /**
@@ -487,17 +706,64 @@ class CountdownWatcher {
   }
 
   /**
+   * Extract countdown duration with priority order:
+   * 1. data-duration attribute
+   * 2. initial textContent number
+   * 3. fallback to max_watch_window_seconds
+   */
+  extractCountdownDuration(element) {
+    // First, check for data-duration attribute
+    if (element && element.dataset && element.dataset.duration) {
+      const duration = parseInt(element.dataset.duration, 10);
+      if (!isNaN(duration) && duration > 0) {
+        console.log('CountdownWatcher: Using data-duration attribute:', duration);
+        return duration;
+      }
+    }
+    
+    // Second, try to extract from the initial text content
+    const textContent = this.getTextContent(element);
+    const initialNumericValue = this.extractNumericValue(textContent);
+    if (initialNumericValue !== null && initialNumericValue > 0) {
+      console.log('CountdownWatcher: Using initial text content value:', initialNumericValue);
+      return initialNumericValue;
+    }
+    
+    // Third, fallback to max watch window seconds
+    console.log('CountdownWatcher: Using fallback max duration:', this.options.maximumDuration);
+    return this.options.maximumDuration;
+  }
+
+  /**
    * Handle a confirmed countdown element
    */
   handleConfirmedCountdown(element) {
     // Store the confirmed countdown element
     this.detectedCountdownElement = element;
     
+    // Extract the current countdown value from the element
+    const currentText = this.getTextContent(element);
+    const currentValue = this.extractNumericValue(currentText);
+    
+    // If we can't extract the current value, use fallback
+    const countdownDuration = currentValue !== null ? currentValue : 10; // fallback to 10 seconds
+    
+    console.log('CountdownWatcher: Countdown confirmed with duration:', countdownDuration, 'seconds');
+    
     // Scroll to the countdown if needed
     this.scrollToCountdown(element);
     
-    // Apply visual focus effect
-    this.applyFocusEffect(element);
+    // Apply visual focus effect with duration equal to remaining countdown time
+    this.applyFocusEffect(element, countdownDuration);
+    
+    // Disconnect the observer since we've confirmed a countdown
+    this.disconnectObserver();
+    
+    // Stop the general countdown detection
+    this.stopCountdownDetection();
+    
+    // Continue monitoring the specific countdown element until it completes
+    this.continueMonitoring(element, countdownDuration);
   }
 
   /**
@@ -538,7 +804,7 @@ class CountdownWatcher {
   /**
    * Apply a temporary visual focus effect to the countdown element
    */
-  applyFocusEffect(element) {
+  applyFocusEffect(element, countdownDuration = null) {
     if (!element) return;
 
     // Add CSS class for focus effect
@@ -550,7 +816,20 @@ class CountdownWatcher {
     // Create an overlay element for enhanced visibility
     this.createOverlayEffect(element);
 
-    console.log('CountdownWatcher: Applied focus effect to countdown element', element);
+    // Determine the duration for the effect
+    // According to requirements: effect duration must be exactly equal to remaining countdown seconds
+    const effectDuration = countdownDuration !== null ? countdownDuration : 10; // fallback to 10 seconds
+    
+    // Set up a timeout to remove the effect when the countdown completes
+    if (this.focusEffectTimeout) {
+      clearTimeout(this.focusEffectTimeout);
+    }
+    
+    this.focusEffectTimeout = setTimeout(() => {
+      this.removeFocusEffect(element);
+    }, effectDuration * 1000); // Convert seconds to milliseconds
+
+    console.log('CountdownWatcher: Applied focus effect to countdown element for', effectDuration, 'seconds', element);
   }
   
   /**
@@ -704,6 +983,21 @@ class CountdownWatcher {
   }
   
   /**
+   * Remove focus effect from element
+   */
+  removeFocusEffect(element) {
+    if (!element) return;
+    
+    // Remove CSS class for focus effect
+    element.classList.remove('countdown-focus-effect');
+    
+    // Remove overlay effect
+    this.removeOverlayEffect(element);
+    
+    console.log('CountdownWatcher: Removed focus effect from countdown element', element);
+  }
+  
+  /**
    * Start active monitoring for an element to catch changes
    */
   startActiveMonitoring(element) {
@@ -741,14 +1035,23 @@ class CountdownWatcher {
    * Disconnect the observer and clean up
    */
   disconnect() {
-    if (this.countdownObserver) {
-      this.countdownObserver.disconnect();
-      console.log('CountdownWatcher: MutationObserver disconnected');
+    this.disconnectObserver();
+    
+    // Disconnect button observer
+    if (this.buttonObserver) {
+      this.buttonObserver.disconnect();
+      this.buttonObserver = null;
     }
     
     if (this.focusEffectTimeout) {
       clearTimeout(this.focusEffectTimeout);
       this.focusEffectTimeout = null;
+    }
+    
+    // Clear detection timeout if it exists
+    if (this.detectionTimeout) {
+      clearTimeout(this.detectionTimeout);
+      this.detectionTimeout = null;
     }
     
     // Clear all debounce timers
@@ -775,16 +1078,47 @@ class CountdownWatcher {
   }
   
   /**
+   * Disconnect only the MutationObserver
+   */
+  disconnectObserver() {
+    if (this.countdownObserver) {
+      this.countdownObserver.disconnect();
+      this.countdownObserver = null;
+      console.log('CountdownWatcher: MutationObserver disconnected after countdown confirmation');
+    }
+    
+    // Clear all active monitoring intervals that may still be running
+    for (const [element] of this.elementTracker) {
+      if (element.countdownMonitorInterval) {
+        clearInterval(element.countdownMonitorInterval);
+        element.countdownMonitorInterval = null;
+      }
+    }
+  }
+  
+  /**
    * Update the enabled state of the countdown watcher
    */
   setEnabled(enabled) {
     this.options.enabled = enabled;
     
     if (!enabled) {
-      // If disabling, disconnect the observer and clear all tracking
+      // If disabling, disconnect all observers and clear all tracking
       if (this.countdownObserver) {
         this.countdownObserver.disconnect();
         console.log('CountdownWatcher: Disabled, disconnected observer');
+      }
+      
+      // Disconnect button observer
+      if (this.buttonObserver) {
+        this.buttonObserver.disconnect();
+        console.log('CountdownWatcher: Disabled, disconnected button observer');
+      }
+      
+      // Clear detection timeout if it exists
+      if (this.detectionTimeout) {
+        clearTimeout(this.detectionTimeout);
+        this.detectionTimeout = null;
       }
       
       // Remove all focus effects before clearing tracker
@@ -793,6 +1127,14 @@ class CountdownWatcher {
           element.classList.remove('countdown-focus-effect');
         }
         this.removeOverlayEffect(element);
+      }
+      
+      // Clear all active monitoring intervals
+      for (const [element] of this.elementTracker) {
+        if (element.countdownMonitorInterval) {
+          clearInterval(element.countdownMonitorInterval);
+          element.countdownMonitorInterval = null;
+        }
       }
       
       // Clear all tracking
@@ -804,13 +1146,20 @@ class CountdownWatcher {
       }
       this.debounceTimers.clear();
       
+      // Clear the focus effect timeout
+      if (this.focusEffectTimeout) {
+        clearTimeout(this.focusEffectTimeout);
+        this.focusEffectTimeout = null;
+      }
+      
       // Reset state
       this.hasScrolledToCountdown = false;
       this.detectedCountdownElement = null;
+      this.isDetecting = false;
     } else {
-      // If enabling, start observing again
+      // If enabling, set up button listeners again
       if (this.isExtensionEnabled()) {
-        this.startObserving();
+        this.setupButtonListeners();
       }
     }
   }
@@ -820,9 +1169,18 @@ class CountdownWatcher {
    */
   reset() {
     this.disconnect();
+    this.resetState();
+    this.extensionElements = new WeakSet();
+  }
+  
+  /**
+   * Reset just the state variables
+   */
+  resetState() {
     this.hasScrolledToCountdown = false;
     this.detectedCountdownElement = null;
-    this.extensionElements = new WeakSet();
+    this.isDetecting = false;
+    this.detectionTimeout = null;
   }
 
   /**

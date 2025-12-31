@@ -40,6 +40,7 @@
   let lastDetectionHadAds = false; // Track if last detection found new ads
   let mutationQueue = []; // Queue for mutations to process in batches
   let mutationProcessingScheduled = false; // Flag to ensure only one batch process is scheduled
+  let countdownWatcher = null; // Countdown watcher instance
 
 
 
@@ -69,6 +70,12 @@
       if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
         console.log('Chrome runtime not available, defaulting to disabled');
         isEnabled = false;
+        // Update the global extension state for CountdownWatcher
+        window.safeUrlExtensionEnabled = false;
+        // Update countdown watcher if it exists
+        if (countdownWatcher) {
+          countdownWatcher.setEnabled(false);
+        }
         resolve();
         return;
       }
@@ -89,11 +96,26 @@
               // If all attempts failed, default to disabled
               console.log('All attempts failed, defaulting to disabled');
               isEnabled = false;
+              // Update the global extension state for CountdownWatcher
+              window.safeUrlExtensionEnabled = false;
+              // Update countdown watcher if it exists
+              if (countdownWatcher) {
+                countdownWatcher.setEnabled(false);
+              }
               resolve();
             }
           } else if (response && response.enabled !== undefined) {
             isEnabled = response.enabled;
             console.log('Received state from extension:', isEnabled);
+            
+            // Update the global extension state for CountdownWatcher
+            window.safeUrlExtensionEnabled = isEnabled;
+            
+            // Update countdown watcher if it exists
+            if (countdownWatcher) {
+              countdownWatcher.setEnabled(isEnabled);
+            }
+            
             // Load filter list if extension is enabled
             if (isEnabled && !filterListLoaded) {
               loadFilterList().then(() => {
@@ -105,6 +127,12 @@
           } else {
             // Default to disabled
             isEnabled = false;
+            // Update the global extension state for CountdownWatcher
+            window.safeUrlExtensionEnabled = false;
+            // Update countdown watcher if it exists
+            if (countdownWatcher) {
+              countdownWatcher.setEnabled(false);
+            }
             resolve();
           }
         });
@@ -180,6 +208,9 @@
       const wasEnabled = isEnabled;
       isEnabled = request.enabled;
       
+      // Update the global extension state for CountdownWatcher
+      window.safeUrlExtensionEnabled = isEnabled;
+      
       if (isEnabled) {
         console.log('Enabling Ad Guard');
         // Only start if already initialized, otherwise wait for initialization
@@ -219,6 +250,27 @@
     // Detect and overlay ad elements
     detectAndOverlayAds();
     
+    // Initialize countdown watcher if it exists
+    if (typeof CountdownWatcher !== 'undefined') {
+      // Create a new countdown watcher instance if one doesn't exist
+      if (!countdownWatcher) {
+        countdownWatcher = new CountdownWatcher({
+          enabled: true,
+          minimumDuration: 1,  // Accept any reasonable countdown (1-120 seconds)
+          maximumDuration: 120, // Accept any reasonable countdown
+          scrollBehavior: 'smooth',
+          focusEffectDuration: 10000,
+          validationDelay: 1000,
+          debounceTime: 300
+        });
+        console.log('CountdownWatcher started');
+      } else {
+        // Enable the existing instance
+        countdownWatcher.setEnabled(true);
+        console.log('CountdownWatcher enabled');
+      }
+    }
+    
     // Set up MutationObserver to handle dynamic content
     setupMutationObserver();
     
@@ -241,6 +293,12 @@
     if (observer) {
       observer.disconnect();
       observer = null;
+    }
+    
+    // Disable countdown watcher if it exists
+    if (countdownWatcher) {
+      countdownWatcher.setEnabled(false);
+      console.log('CountdownWatcher disabled');
     }
     
     // Clear periodic detection interval

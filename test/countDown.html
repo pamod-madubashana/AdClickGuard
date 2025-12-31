@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shortlink Countdown Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+        }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .countdown {
+            font-size: 22px;
+            opacity: 0.9;
+        }
+
+        .continue-btn {
+            padding: 14px 32px;
+            font-size: 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #334155;
+            color: #94a3b8;
+        }
+
+        .continue-btn.enabled {
+            cursor: pointer;
+            background: #22c55e;
+            color: #022c22;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>One last step</h1>
+
+    <div id="countdown" class="countdown">
+        Click continue to start
+    </div>
+
+    <button id="continueBtn" class="continue-btn">
+        Continue
+    </button>
+</div>
+
+<script>
+    const btn = document.getElementById('continueBtn');
+    const countdownEl = document.getElementById('countdown');
+
+    let running = false;
+    let seconds = 30;
+    let timer;
+
+    btn.addEventListener('click', () => {
+        if (running) return;
+
+        running = true;
+        btn.disabled = true;
+        btn.classList.remove('enabled');
+
+        countdownEl.textContent = `Please wait ${seconds} seconds`;
+
+        timer = setInterval(() => {
+            seconds--;
+
+            // simulate DOM churn
+            countdownEl.textContent = `Please wait ${seconds} seconds`;
+
+            if (seconds <= 0) {
+                clearInterval(timer);
+                countdownEl.textContent = 'You may continue';
+                btn.disabled = false;
+                btn.classList.add('enabled');
+                btn.textContent = 'Go to destination';
+            }
+        }, 1000);
+    });
+</script>
+
+</body>
+</html>
