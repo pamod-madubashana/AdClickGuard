@@ -238,17 +238,21 @@
     return true; // Required for async sendResponse
   }
 
+  let adDetectionInitialized = false;
+  
   function startAdGuard() {
     console.log('startAdGuard called, isInitialized:', isInitialized);
     
-    // Reset idle state when starting
-    idleState = false;
-    
-    // Run immediate high-confidence detection for Google Publisher Tags and other known ad elements
-    detectHighConfidenceAds();
-    
-    // Detect and overlay ad elements
-    detectAndOverlayAds();
+    // Run ad detection only once per page load
+    if (!adDetectionInitialized) {
+      adDetectionInitialized = true;
+      
+      // Run immediate high-confidence detection for Google Publisher Tags and other known ad elements
+      detectHighConfidenceAds();
+      
+      // Detect and overlay ad elements
+      detectAndOverlayAds();
+    }
     
     // Initialize countdown watcher if it exists
     if (typeof CountdownWatcher !== 'undefined') {
@@ -307,8 +311,9 @@
       periodicDetectionInterval = null;
     }
     
-    // Reset initialization flag
+    // Reset initialization flags
     isInitialized = false;
+    adDetectionInitialized = false; // Reset so ad detection runs again when re-enabled
   }
 
   function processPageElements() {
@@ -846,13 +851,16 @@
       observer = new MutationObserver((mutations) => {
         if (!isEnabled) return;
         
-        // Filter out mutations caused by our own overlays to prevent infinite loops
+        // Filter out mutations caused by our own overlays and countdown effects to prevent infinite loops
         const filteredMutations = mutations.filter(mutation => {
           if (mutation.type === 'childList') {
             return Array.from(mutation.addedNodes).every(node => {
               // Skip mutations that involve our overlay elements
               if (node.nodeType === Node.ELEMENT_NODE) {
-                return !node.classList || !node.classList.contains('ad-click-guard-overlay');
+                return !node.classList || 
+                       !(node.classList.contains('ad-click-guard-overlay') ||
+                         node.classList.contains('countdown-focus-effect') ||
+                         node.classList.contains('countdown-focus-overlay'));
               }
               return true;
             });
@@ -888,9 +896,11 @@
                 if (mutation.type === 'childList') {
                   mutation.addedNodes.forEach((node) => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
-                      // Check if this is our own overlay to ignore
-                      if (node.classList && node.classList.contains('ad-click-guard-overlay')) {
-                        return; // Skip our own overlays
+                      // Check if this is our own overlay or countdown effect to ignore
+                      if (node.classList && (node.classList.contains('ad-click-guard-overlay') || 
+                          node.classList.contains('countdown-focus-effect') || 
+                          node.classList.contains('countdown-focus-overlay'))) {
+                        return; // Skip our own elements
                       }
                       
                       // Process the new element
@@ -914,7 +924,9 @@
                         let currentNode;
                         while (currentNode = walker.nextNode()) {
                           // Skip our own overlay elements
-                          if (currentNode.classList && currentNode.classList.contains('ad-click-guard-overlay')) {
+                          if (currentNode.classList && (currentNode.classList.contains('ad-click-guard-overlay') ||
+                              currentNode.classList.contains('countdown-focus-effect') ||
+                              currentNode.classList.contains('countdown-focus-overlay'))) {
                             continue;
                           }
                           
@@ -936,21 +948,23 @@
                 else if (mutation.type === 'attributes') {
                   if (mutation.target.nodeType === Node.ELEMENT_NODE) {
                     // Skip our own overlay elements
-                    if (mutation.target.classList && mutation.target.classList.contains('ad-click-guard-overlay')) {
+                    if (mutation.target.classList && (mutation.target.classList.contains('ad-click-guard-overlay') ||
+                        mutation.target.classList.contains('countdown-focus-effect') ||
+                        mutation.target.classList.contains('countdown-focus-overlay'))) {
                       return;
                     }
-                    
+                                    
                     processNewElement(mutation.target);
-                              
+                                    
                     // Check if the attribute change made this an ad element
                     if (isEnabled && filterListLoaded) {
                       checkElementForAds(mutation.target);
                       newAdElementsDetected = true;
-                                
+                                      
                       // Specifically check for Google Publisher Tags and other ad elements that might be added via attribute changes
                       const target = mutation.target;
                       const elementId = target.id || '';
-                                
+                                      
                       // Check for Google Publisher Tags
                       if (elementId.includes('gpt-ad') || elementId.includes('google_ads') || 
                           elementId.includes('div-gpt-ad') || elementId.includes('gpt_unit')) {
@@ -958,12 +972,12 @@
                           addAdOverlay(target);
                         }
                       }
-                                
+                                      
                       // Check for elements with data-google-query-id (high confidence Google ads)
                       if (target.hasAttribute('data-google-query-id') && !isAdElement(target) && !hasParentAdOverlay(target)) {
                         addAdOverlay(target);
                       }
-                                
+                                      
                       // Check for Google ad attributes
                       if ((target.hasAttribute('data-ad-client') ||
                           target.hasAttribute('data-google-av-ad') ||
@@ -972,7 +986,7 @@
                           target.hasAttribute('data-ad-format')) && !isAdElement(target) && !hasParentAdOverlay(target)) {
                         addAdOverlay(target);
                       }
-                                
+                                      
                       // Check for GoogleActiveViewElement class
                       if (target.classList && target.classList.contains('GoogleActiveViewElement') && !isAdElement(target) && !hasParentAdOverlay(target)) {
                         addAdOverlay(target);
@@ -1226,6 +1240,11 @@
 
 
 
+  // Handle page navigation to reset ad detection
+  window.addEventListener('beforeunload', () => {
+    adDetectionInitialized = false;
+  });
+  
   // Handle page visibility changes
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && isInitialized && isEnabled) {
@@ -1234,10 +1253,11 @@
         clearTimeout(detectionTimeout);
       }
       detectionTimeout = setTimeout(() => {
-        // Only run if not already in progress
-        if (!detectionInProgress) {
+        // Only run if not already in progress and ad detection hasn't run yet
+        if (!detectionInProgress && !adDetectionInitialized) {
           detectHighConfidenceAds(); // Run high-confidence detection first
           detectAndOverlayAds(); // Then run EasyList-based detection
+          adDetectionInitialized = true;
         }
       }, 100);
     }
