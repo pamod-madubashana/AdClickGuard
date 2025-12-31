@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Countdown Scroll Test</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #121212;
+    color: #fff;
+    line-height: 1.5;
+  }
+
+  .hero, .next-section, .next-button-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    position: relative;
+  }
+
+  button {
+    padding: 15px 30px;
+    font-size: 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    background-color: #1e88e5;
+    color: #fff;
+    transition: background 0.2s;
+  }
+
+  button:hover {
+    background-color: #1565c0;
+  }
+
+  #countdown-container {
+    display: none;
+    font-size: 28px;
+    margin-top: 20px;
+  }
+
+  #next-button-section {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <button id="start-button">Continue</button>
+</div>
+
+<div class="next-section" style="height:200vh;">
+  <div id="countdown-container">
+    Please wait <span id="counter">30</span> seconds...
+  </div>
+</div>
+
+<div class="next-button-section" id="next-button-section">
+  <button id="next-button">Next</button>
+</div>
+
+<script>
+  const startButton = document.getElementById('start-button');
+  const countdownContainer = document.getElementById('countdown-container');
+  const counter = document.getElementById('counter');
+  const nextButtonSection = document.getElementById('next-button-section');
+  const nextButton = document.getElementById('next-button');
+
+  let countdownInterval;
+
+  startButton.addEventListener('click', () => {
+    startButton.style.display = 'none'; // hide the button
+    countdownContainer.style.display = 'block'; // show countdown
+
+    let count = 20;
+    counter.textContent = count;
+
+    countdownInterval = setInterval(() => {
+      count--;
+      counter.textContent = count;
+
+      if (count <= 0) {
+        clearInterval(countdownInterval);
+        countdownContainer.textContent = 'Scroll down and press the next button to continue';
+        nextButtonSection.style.display = 'flex'; // show next button
+      }
+    }, 1000);
+  });
+</script>
+
+</body>
+</html>
