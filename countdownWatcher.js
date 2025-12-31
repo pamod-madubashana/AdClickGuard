@@ -692,9 +692,6 @@ class CountdownWatcher {
       // Check if element still exists before removing effects
       if (document.contains(element)) {
         console.log('CountdownWatcher: Countdown duration completed, removing effect', element);
-        if (element && element.classList) {
-          element.classList.remove('countdown-focus-effect');
-        }
         this.removeOverlayEffect(element);
       }
     }, countdownDuration * 1000); // Convert seconds to milliseconds
@@ -858,9 +855,6 @@ class CountdownWatcher {
   applyFocusEffect(element, countdownDuration = null) {
     if (!element) return;
 
-    // Add CSS class for focus effect
-    element.classList.add('countdown-focus-effect');
-    
     // Add temporary CSS if not already present
     this.addFocusEffectStyles();
     
@@ -911,13 +905,14 @@ class CountdownWatcher {
     updatePosition();
     
     overlay.style.position = 'absolute';
-    overlay.style.border = '3px solid #ff6b6b';
-    overlay.style.borderRadius = '50%';
+    overlay.style.border = '3px solid #4ade80';
+    overlay.style.borderRadius = '12px';
     overlay.style.pointerEvents = 'none';
     overlay.style.zIndex = '9999';
     overlay.style.boxSizing = 'border-box';
     overlay.style.animation = 'countdown-overlay-pulse 1s infinite alternate';
-    overlay.style.boxShadow = '0 0 20px rgba(255, 107, 107, 0.7)';
+    overlay.style.boxShadow = '0 0 20px rgba(74, 222, 128, 0.7)';
+    overlay.style.backgroundColor = 'rgba(74, 222, 128, 0.1)';
     
     // Mark this element as added by the extension to avoid observing it
     this.markAsExtensionElement(overlay);
@@ -967,10 +962,11 @@ class CountdownWatcher {
     style.textContent = `
       .countdown-focus-effect {
         position: relative;
-        animation: countdown-pulse 1s infinite alternate, countdown-glow 1.5s infinite alternate;
+        animation: countdown-pulse 0.8s infinite alternate, countdown-glow 1.2s infinite alternate;
         transform-origin: center;
         transition: all 0.3s ease;
         z-index: 9999 !important;
+        border-radius: 8px !important;
       }
       
       .countdown-focus-effect::after {
@@ -981,8 +977,8 @@ class CountdownWatcher {
         width: calc(100% + 20px);
         height: calc(100% + 20px);
         transform: translate(-50%, -50%);
-        border: 3px solid #ff6b6b;
-        border-radius: 50%;
+        border: 3px solid #4ade80;
+        border-radius: 12px;
         box-sizing: border-box;
         pointer-events: none;
         z-index: -1;
@@ -990,18 +986,24 @@ class CountdownWatcher {
       }
       
       @keyframes countdown-pulse {
-        from { transform: scale(1); }
-        to { transform: scale(1.05); }
+        0% { 
+          transform: scale(1);
+          filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.5));
+        }
+        100% { 
+          transform: scale(1.03);
+          filter: drop-shadow(0 0 15px rgba(74, 222, 128, 0.8));
+        }
       }
       
       @keyframes countdown-glow {
-        from { 
-          box-shadow: 0 0 10px rgba(255, 107, 107, 0.5), 0 0 20px rgba(255, 107, 107, 0.3); 
-          outline: 2px solid rgba(255, 107, 107, 0.5);
+        0% { 
+          box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 20px rgba(74, 222, 128, 0.3); 
+          outline: 2px solid rgba(74, 222, 128, 0.5);
         }
-        to { 
-          box-shadow: 0 0 30px rgba(255, 107, 107, 0.8), 0 0 40px rgba(255, 107, 107, 0.6);
-          outline: 2px solid rgba(255, 107, 107, 0.8);
+        100% { 
+          box-shadow: 0 0 25px rgba(74, 222, 128, 0.8), 0 0 35px rgba(74, 222, 128, 0.6);
+          outline: 2px solid rgba(74, 222, 128, 0.8);
         }
       }
       
@@ -1009,23 +1011,25 @@ class CountdownWatcher {
         0% {
           width: calc(100% + 20px);
           height: calc(100% + 20px);
-          opacity: 0.7;
+          opacity: 0.6;
+          border-color: rgba(74, 222, 128, 0.6);
         }
         100% {
-          width: calc(100% + 40px);
-          height: calc(100% + 40px);
+          width: calc(100% + 30px);
+          height: calc(100% + 30px);
           opacity: 0.3;
+          border-color: rgba(74, 222, 128, 0.3);
         }
       }
       
       @keyframes countdown-overlay-pulse {
         0% {
           transform: scale(1);
-          opacity: 0.7;
+          opacity: 0.8;
         }
         100% {
-          transform: scale(1.1);
-          opacity: 0.4;
+          transform: scale(1.05);
+          opacity: 0.6;
         }
       }
     `;
@@ -1038,9 +1042,6 @@ class CountdownWatcher {
    */
   removeFocusEffect(element) {
     if (!element) return;
-    
-    // Remove CSS class for focus effect
-    element.classList.remove('countdown-focus-effect');
     
     // Remove overlay effect
     this.removeOverlayEffect(element);
